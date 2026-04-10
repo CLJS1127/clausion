@@ -1,0 +1,2 @@
+ALTER TABLE courses ADD COLUMN schedule VARCHAR(100);
+ALTER TABLE courses ADD COLUMN class_time VARCHAR(50);

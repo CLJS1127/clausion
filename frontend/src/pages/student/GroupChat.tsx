@@ -1,0 +1,306 @@
+import { useState, useEffect, useRef, useCallback } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
+import { Client } from '@stomp/stompjs';
+import { motion, AnimatePresence } from 'framer-motion';
+import { groupChatApi } from '../../api/groupChat';
+import { studyGroupApi } from '../../api/studyGroup';
+import { useAuthStore } from '../../store/authStore';
+import type { GroupChatMessage, StudyGroup } from '../../types';
+
+export default function GroupChat() {
+  const { groupId } = useParams<{ groupId: string }>();
+  const navigate = useNavigate();
+  const { user, token } = useAuthStore();
+  const userId = user?.id ? Number(user.id) : 0;
+
+  const [messages, setMessages] = useState<GroupChatMessage[]>([]);
+  const [input, setInput] = useState('');
+  const [connected, setConnected] = useState(false);
+  const clientRef = useRef<Client | null>(null);
+  const bottomRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  // Fetch group info
+  const { data: group } = useQuery<StudyGroup>({
+    queryKey: ['study-group', groupId],
+    queryFn: () => studyGroupApi.getStudyGroup(groupId!),
+    enabled: !!groupId,
+  });
+
+  // Fetch chat history
+  const { data: history } = useQuery<GroupChatMessage[]>({
+    queryKey: ['group-chat-history', groupId],
+    queryFn: () => groupChatApi.getMessages(groupId!),
+    enabled: !!groupId,
+  });
+
+  // Load history into messages
+  useEffect(() => {
+    if (history) setMessages(history);
+  }, [history]);
+
+  // Auto-scroll to bottom
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages]);
+
+  // WebSocket/STOMP connection
+  useEffect(() => {
+    if (!groupId || !token) return;
+
+    const wsProtocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
+    const wsHost = import.meta.env.VITE_API_URL
+      ? new URL(import.meta.env.VITE_API_URL).host
+      : 'localhost:8080';
+
+    const client = new Client({
+      brokerURL: `${wsProtocol}://${wsHost}/ws-chat?token=${token}`,
+      reconnectDelay: 5000,
+      heartbeatIncoming: 10000,
+      heartbeatOutgoing: 10000,
+      onConnect: () => {
+        setConnected(true);
+        client.subscribe(`/topic/group-chat/${groupId}`, (frame) => {
+          const msg: GroupChatMessage = JSON.parse(frame.body);
+          setMessages((prev) => {
+            // Deduplicate by id
+            if (msg.id && prev.some((m) => m.id === msg.id)) return prev;
+            return [...prev, msg];
+          });
+        });
+      },
+      onDisconnect: () => setConnected(false),
+      onStompError: (frame) => {
+        console.error('STOMP error:', frame.headers.message);
+        setConnected(false);
+      },
+    });
+
+    client.activate();
+    clientRef.current = client;
+
+    return () => {
+      client.deactivate();
+      clientRef.current = null;
+    };
+  }, [groupId, token]);
+
+  const sendMessage = useCallback(() => {
+    const text = input.trim();
+    if (!text || !clientRef.current?.connected) return;
+
+    clientRef.current.publish({
+      destination: `/app/group-chat/${groupId}/send`,
+      body: JSON.stringify({ content: text }),
+    });
+    setInput('');
+    inputRef.current?.focus();
+  }, [input, groupId]);
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      sendMessage();
+    }
+  };
+
+  const formatTime = (iso: string) => {
+    const d = new Date(iso);
+    return d.toLocaleTimeString('ko-KR', { hour: '2-digit', minute: '2-digit' });
+  };
+
+  const formatDateHeader = (iso: string) => {
+    const d = new Date(iso);
+    return d.toLocaleDateString('ko-KR', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      weekday: 'short',
+    });
+  };
+
+  // Group messages by date
+  const groupedMessages: { date: string; msgs: GroupChatMessage[] }[] = [];
+  messages.forEach((msg) => {
+    const date = msg.createdAt?.split('T')[0] ?? '';
+    const last = groupedMessages[groupedMessages.length - 1];
+    if (last && last.date === date) {
+      last.msgs.push(msg);
+    } else {
+      groupedMessages.push({ date, msgs: [msg] });
+    }
+  });
+
+  return (
+    <div className="flex flex-col h-[calc(100vh-64px)] bg-gradient-to-br from-slate-50 via-white to-indigo-50/30">
+      {/* Header */}
+      <header className="sticky top-0 z-30 bg-white/80 backdrop-blur-md border-b border-slate-100 px-6 py-3 flex items-center gap-4">
+        <button
+          onClick={() => navigate('/student/study-groups')}
+          className="shrink-0 w-8 h-8 flex items-center justify-center rounded-lg hover:bg-slate-100 transition-colors"
+        >
+          <svg className="w-5 h-5 text-slate-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+          </svg>
+        </button>
+        <div className="flex-1 min-w-0">
+          <h1 className="text-sm font-bold text-slate-800 truncate">
+            {group?.name ?? '채팅방'}
+          </h1>
+          <p className="text-[11px] text-slate-500">
+            {group?.members.length ?? 0}명 참여 중
+            <span className={`ml-2 inline-block w-1.5 h-1.5 rounded-full ${connected ? 'bg-emerald-400' : 'bg-slate-300'}`} />
+            <span className="ml-1">{connected ? '연결됨' : '연결 중...'}</span>
+          </p>
+        </div>
+        {/* Online members avatars */}
+        <div className="flex -space-x-1.5">
+          {group?.members.slice(0, 4).map((m) => {
+            const name = m.name || m.studentName || '?';
+            return (
+              <div
+                key={m.id}
+                className="w-7 h-7 rounded-full bg-gradient-to-br from-indigo-400 to-violet-500 flex items-center justify-center text-white text-[10px] font-bold border-2 border-white"
+                title={name}
+              >
+                {name.charAt(0)}
+              </div>
+            );
+          })}
+          {(group?.members.length ?? 0) > 4 && (
+            <div className="w-7 h-7 rounded-full bg-slate-200 flex items-center justify-center text-[10px] font-bold text-slate-600 border-2 border-white">
+              +{(group?.members.length ?? 0) - 4}
+            </div>
+          )}
+        </div>
+      </header>
+
+      {/* Messages area */}
+      <div className="flex-1 overflow-y-auto px-6 py-4 space-y-1">
+        {messages.length === 0 && (
+          <div className="flex flex-col items-center justify-center h-full text-center">
+            <div className="w-16 h-16 rounded-2xl bg-indigo-50 flex items-center justify-center mb-4">
+              <svg className="w-8 h-8 text-indigo-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+              </svg>
+            </div>
+            <p className="text-sm font-medium text-slate-600">아직 메시지가 없습니다</p>
+            <p className="text-xs text-slate-400 mt-1">첫 번째 메시지를 보내보세요!</p>
+          </div>
+        )}
+
+        <AnimatePresence initial={false}>
+          {groupedMessages.map((group) => (
+            <div key={group.date}>
+              {/* Date separator */}
+              <div className="flex items-center justify-center my-4">
+                <span className="px-3 py-1 text-[10px] font-medium text-slate-400 bg-slate-100 rounded-full">
+                  {formatDateHeader(group.date + 'T00:00:00')}
+                </span>
+              </div>
+
+              {group.msgs.map((msg, i) => {
+                const isSystem = msg.messageType === 'SYSTEM';
+                const isMe = !isSystem && msg.senderId === userId;
+                const showName =
+                  !isMe &&
+                  !isSystem &&
+                  (i === 0 || group.msgs[i - 1].senderId !== msg.senderId || group.msgs[i - 1].messageType === 'SYSTEM');
+
+                if (isSystem) {
+                  return (
+                    <motion.div
+                      key={msg.id ?? `sys-${i}`}
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      className="flex justify-center my-2"
+                    >
+                      <span className="px-3 py-1 text-[11px] text-slate-400 bg-slate-50 border border-slate-100 rounded-full">
+                        {msg.content}
+                      </span>
+                    </motion.div>
+                  );
+                }
+
+                return (
+                  <motion.div
+                    key={msg.id ?? `temp-${i}`}
+                    initial={{ opacity: 0, y: 8 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.15 }}
+                    className={`flex ${isMe ? 'justify-end' : 'justify-start'} ${showName ? 'mt-3' : 'mt-0.5'}`}
+                  >
+                    {/* Other user avatar */}
+                    {!isMe && showName && (
+                      <div className="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-400 to-violet-500 flex items-center justify-center text-white text-[11px] font-bold shrink-0 mr-2 mt-0.5">
+                        {msg.senderName?.charAt(0) ?? '?'}
+                      </div>
+                    )}
+                    {!isMe && !showName && <div className="w-8 mr-2 shrink-0" />}
+
+                    <div className={`max-w-[70%] ${isMe ? 'items-end' : 'items-start'}`}>
+                      {showName && !isMe && (
+                        <p className="text-[11px] font-medium text-slate-500 mb-0.5 ml-1">
+                          {msg.senderName}
+                        </p>
+                      )}
+                      <div className="flex items-end gap-1.5">
+                        {isMe && (
+                          <span className="text-[10px] text-slate-300 shrink-0 mb-0.5">
+                            {formatTime(msg.createdAt)}
+                          </span>
+                        )}
+                        <div
+                          className={`px-3.5 py-2 rounded-2xl text-sm leading-relaxed break-words ${
+                            isMe
+                              ? 'bg-indigo-600 text-white rounded-br-md'
+                              : 'bg-white border border-slate-100 text-slate-800 rounded-bl-md shadow-sm'
+                          }`}
+                        >
+                          {msg.content}
+                        </div>
+                        {!isMe && (
+                          <span className="text-[10px] text-slate-300 shrink-0 mb-0.5">
+                            {formatTime(msg.createdAt)}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  </motion.div>
+                );
+              })}
+            </div>
+          ))}
+        </AnimatePresence>
+
+        <div ref={bottomRef} />
+      </div>
+
+      {/* Input area */}
+      <div className="sticky bottom-0 bg-white/80 backdrop-blur-md border-t border-slate-100 px-6 py-3">
+        <div className="max-w-3xl mx-auto flex items-center gap-3">
+          <input
+            ref={inputRef}
+            type="text"
+            value={input}
+            onChange={(e) => setInput(e.target.value)}
+            onKeyDown={handleKeyDown}
+            placeholder={connected ? '메시지를 입력하세요...' : '연결 중...'}
+            disabled={!connected}
+            className="flex-1 px-4 py-2.5 rounded-xl border border-slate-200 text-sm bg-white focus:outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 disabled:opacity-50 disabled:bg-slate-50"
+          />
+          <button
+            onClick={sendMessage}
+            disabled={!input.trim() || !connected}
+            className="shrink-0 w-10 h-10 flex items-center justify-center rounded-xl bg-indigo-600 text-white hover:bg-indigo-700 transition-colors disabled:opacity-40 disabled:cursor-not-allowed"
+          >
+            <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+            </svg>
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}

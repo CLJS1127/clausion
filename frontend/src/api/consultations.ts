@@ -1,0 +1,36 @@
+import { api } from './client';
+import type { Consultation } from '../types';
+
+export const consultationsApi = {
+  getConsultations(role: 'student' | 'instructor' = 'student'): Promise<Consultation[]> {
+    return api.get<Consultation[]>(`/api/consultations?role=${role}`);
+  },
+
+  createConsultation(data: {
+    studentId: number;
+    instructorId: number;
+    courseId: number;
+    scheduledAt: string;
+  }): Promise<Consultation> {
+    return api.post<Consultation>('/api/consultations', data);
+  },
+
+  getConsultationBriefing(consultationId: string): Promise<{
+    studentSummary: string;
+    riskAreas: string[];
+    suggestedTopics: string[];
+    actionHistory: string[];
+  }> {
+    return api.get(`/api/consultations/${consultationId}/briefing`);
+  },
+
+  createSummary(
+    consultationId: string,
+    data: { summaryText: string; actionPlanJson: string },
+  ): Promise<{ jobId: number }> {
+    return api.post<{ jobId: number }>(
+      `/api/consultations/${consultationId}/summary`,
+      data,
+    );
+  },
+};
