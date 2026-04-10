@@ -1,1 +1,4 @@
 vibe-coding
+application
+.env
+application-dev.yml

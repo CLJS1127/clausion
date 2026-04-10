@@ -1,0 +1,199 @@
+package com.classpulse.api;
+
+import com.classpulse.ai.ChatbotAi;
+import com.classpulse.config.SecurityUtil;
+import com.classpulse.domain.chatbot.ChatMessage;
+import com.classpulse.domain.chatbot.ChatMessageRepository;
+import com.classpulse.domain.chatbot.Conversation;
+import com.classpulse.domain.chatbot.ConversationRepository;
+import com.classpulse.domain.course.Course;
+import com.classpulse.domain.course.CourseRepository;
+import com.classpulse.domain.user.User;
+import com.classpulse.domain.user.UserService;
+import com.classpulse.notification.MessagePublisher;
+import com.classpulse.notification.SseEmitterService;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
+import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
+
+import java.time.LocalDateTime;
+import java.util.List;
+import java.util.Map;
+
+@Slf4j
+@RestController
+@RequestMapping("/api/chatbot/conversations")
+@RequiredArgsConstructor
+public class ChatbotController {
+
+    private final ConversationRepository conversationRepository;
+    private final ChatMessageRepository chatMessageRepository;
+    private final UserService userService;
+    private final CourseRepository courseRepository;
+    private final ChatbotAi chatbotAi;
+    private final MessagePublisher messagePublisher;
+    private final SseEmitterService sseEmitterService;
+
+    // --- DTOs ---
+
+    public record CreateConversationRequest(Long courseId, String title) {}
+
+    public record SendMessageRequest(String content) {}
+
+    public record ConversationResponse(
+            Long id, Long studentId, Long courseId,
+            String title, String status,
+            LocalDateTime createdAt, LocalDateTime updatedAt,
+            int messageCount
+    ) {
+        public static ConversationResponse from(Conversation c) {
+            return new ConversationResponse(
+                    c.getId(), c.getStudent().getId(),
+                    c.getCourse() != null ? c.getCourse().getId() : null,
+                    c.getTitle(), c.getStatus(),
+                    c.getCreatedAt(), c.getUpdatedAt(),
+                    c.getMessages() != null ? c.getMessages().size() : 0
+            );
+        }
+    }
+
+    public record MessageResponse(
+            Long id, String role, String content,
+            List<Map<String, Object>> inlineCards,
+            Integer tokenCount, LocalDateTime createdAt
+    ) {
+        public static MessageResponse from(ChatMessage m) {
+            return new MessageResponse(
+                    m.getId(), m.getRole(), m.getContent(),
+                    m.getInlineCardsJson(), m.getTokenCount(),
+                    m.getCreatedAt()
+            );
+        }
+    }
+
+    public record ConversationDetailResponse(
+            Long id, Long studentId, Long courseId,
+            String title, String status,
+            List<MessageResponse> messages,
+            LocalDateTime createdAt, LocalDateTime updatedAt
+    ) {
+        public static ConversationDetailResponse from(Conversation c, List<ChatMessage> messages) {
+            return new ConversationDetailResponse(
+                    c.getId(), c.getStudent().getId(),
+                    c.getCourse() != null ? c.getCourse().getId() : null,
+                    c.getTitle(), c.getStatus(),
+                    messages.stream().map(MessageResponse::from).toList(),
+                    c.getCreatedAt(), c.getUpdatedAt()
+            );
+        }
+    }
+
+    // --- Endpoints ---
+
+    @PostMapping
+    public ResponseEntity<ConversationResponse> createConversation(@RequestBody CreateConversationRequest request) {
+        Long userId = SecurityUtil.getCurrentUserId();
+        User student = userService.findById(userId);
+
+        Course course = null;
+        if (request.courseId() != null) {
+            course = courseRepository.findById(request.courseId()).orElse(null);
+        }
+
+        Conversation conversation = Conversation.builder()
+                .student(student)
+                .course(course)
+                .title(request.title() != null ? request.title() : "New Conversation")
+                .status("ACTIVE")
+                .build();
+        conversation = conversationRepository.save(conversation);
+
+        return ResponseEntity.status(HttpStatus.CREATED).body(ConversationResponse.from(conversation));
+    }
+
+    @GetMapping
+    public ResponseEntity<List<ConversationResponse>> listConversations() {
+        Long userId = SecurityUtil.getCurrentUserId();
+        List<Conversation> conversations = conversationRepository.findByStudentIdOrderByUpdatedAtDesc(userId);
+        return ResponseEntity.ok(conversations.stream().map(ConversationResponse::from).toList());
+    }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<ConversationDetailResponse> getConversation(@PathVariable Long id) {
+        Conversation conversation = conversationRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Conversation not found: " + id));
+
+        // Verify ownership
+        Long userId = SecurityUtil.getCurrentUserId();
+        if (!conversation.getStudent().getId().equals(userId)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
+
+        List<ChatMessage> messages = chatMessageRepository
+                .findByConversationIdOrderByCreatedAtAsc(id);
+
+        return ResponseEntity.ok(ConversationDetailResponse.from(conversation, messages));
+    }
+
+    @PostMapping("/{id}/messages")
+    public ResponseEntity<MessageResponse> sendMessage(
+            @PathVariable Long id,
+            @RequestBody SendMessageRequest request
+    ) {
+        Conversation conversation = conversationRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Conversation not found: " + id));
+
+        Long userId = SecurityUtil.getCurrentUserId();
+        if (!conversation.getStudent().getId().equals(userId)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
+
+        // Call ChatbotAi which saves user message, generates AI response with twin context,
+        // saves assistant message, and updates conversation
+        Map<String, Object> aiResult = chatbotAi.chat(id, request.content());
+
+        Long messageId = (Long) aiResult.get("messageId");
+        ChatMessage aiMessage = chatMessageRepository.findById(messageId)
+                .orElseThrow(() -> new IllegalStateException("AI message not found: " + messageId));
+
+        // Publish AI response to RabbitMQ
+        messagePublisher.publishChatbotResponse(id, aiMessage);
+
+        return ResponseEntity.status(HttpStatus.CREATED).body(MessageResponse.from(aiMessage));
+    }
+
+    /**
+     * SSE stream endpoint for real-time chatbot messages in a conversation.
+     */
+    @GetMapping(value = "/{id}/stream", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
+    public SseEmitter streamConversation(@PathVariable Long id) {
+        Conversation conversation = conversationRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Conversation not found: " + id));
+
+        Long userId = SecurityUtil.getCurrentUserId();
+        if (!conversation.getStudent().getId().equals(userId)) {
+            throw new IllegalArgumentException("Forbidden");
+        }
+
+        return sseEmitterService.createChatbotEmitter(id);
+    }
+
+    @DeleteMapping("/{id}")
+    public ResponseEntity<Void> deleteConversation(@PathVariable Long id) {
+        Conversation conversation = conversationRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("Conversation not found: " + id));
+
+        Long userId = SecurityUtil.getCurrentUserId();
+        if (!conversation.getStudent().getId().equals(userId)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+        }
+
+        conversation.setStatus("DELETED");
+        conversationRepository.save(conversation);
+        return ResponseEntity.noContent().build();
+    }
+}
