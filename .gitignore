@@ -1,5 +1,7 @@
 vibe-coding
 application
-.env*
+.env.example
+.env
 application-dev.yml
-.claude*
+.claude-octopus
+.claude 
