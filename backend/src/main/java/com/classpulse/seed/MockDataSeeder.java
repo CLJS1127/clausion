@@ -36,7 +36,6 @@ import com.classpulse.domain.user.UserRepository;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.CommandLineRunner;
-import org.springframework.context.annotation.Profile;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
@@ -49,7 +48,6 @@ import java.util.*;
 
 @Slf4j
 @Component
-@Profile("dev")
 @RequiredArgsConstructor
 public class MockDataSeeder implements CommandLineRunner {
 
@@ -74,710 +72,394 @@ public class MockDataSeeder implements CommandLineRunner {
     private final PasswordEncoder passwordEncoder;
     private final EntityManager em;
 
+    private static final int N = 100;
+
     @Override
     @Transactional
     public void run(String... args) {
-        if (userRepository.count() > 0) {
-            log.info("[MockDataSeeder] Data already exists, skipping seed.");
+        if (userRepository.findByEmail("student001@classpulse.dev").isPresent()) {
+            log.info("[Seed] Already seeded, skipping.");
             return;
         }
+        log.info("[Seed] Seeding {} students with rich demo data...", N);
 
-        log.info("[MockDataSeeder] Seeding demo data...");
-
-        String encodedPassword = passwordEncoder.encode("password123");
-
-        // ── 1. Users (10 students + 2 instructors) ─────────────────────
-        User[] students = new User[10];
-        String[][] studentData = {
-                {"student01@classpulse.dev", "김민준"},
-                {"student02@classpulse.dev", "이서연"},
-                {"student03@classpulse.dev", "박지훈"},
-                {"student04@classpulse.dev", "최은서"},
-                {"student05@classpulse.dev", "정현우"},
-                {"student06@classpulse.dev", "강수빈"},
-                {"student07@classpulse.dev", "윤도현"},
-                {"student08@classpulse.dev", "장하은"},
-                {"student09@classpulse.dev", "임태양"},
-                {"student10@classpulse.dev", "한서진"},
-        };
-        for (int i = 0; i < 10; i++) {
-            students[i] = userRepository.save(User.builder()
-                    .email(studentData[i][0])
-                    .passwordHash(encodedPassword)
-                    .name(studentData[i][1])
-                    .role(User.Role.STUDENT)
-                    .build());
-        }
-
-        User instructor1 = userRepository.save(User.builder()
-                .email("instructor01@classpulse.dev")
-                .passwordHash(encodedPassword)
-                .name("박지훈(강사)")
-                .role(User.Role.INSTRUCTOR)
-                .build());
-
-        User instructor2 = userRepository.save(User.builder()
-                .email("instructor02@classpulse.dev")
-                .passwordHash(encodedPassword)
-                .name("이영수(강사)")
-                .role(User.Role.INSTRUCTOR)
-                .build());
-
-        log.info("[MockDataSeeder] Created 12 users (10 students, 2 instructors)");
-
-        // ── 2. Course with 8 weeks ──────────────────────────────────────
-        Course course = Course.builder()
-                .title("풀스택 웹개발 부트캠프")
-                .description("HTML/CSS부터 React, Spring Boot까지 16주 완성 풀스택 과정")
-                .status("ACTIVE")
-                .createdBy(instructor1)
-                .build();
-
-        String[][] weekData = {
-                {"HTML & CSS 기초", "시맨틱 HTML, Flexbox, Grid 레이아웃 학습"},
-                {"JavaScript 핵심", "변수, 함수, 스코프, 클로저, 비동기 프로그래밍"},
-                {"React 기초", "컴포넌트, Props, State, Hooks 기본 개념"},
-                {"React 심화", "Context API, useReducer, 커스텀 훅, 성능 최적화"},
-                {"Java & Spring 입문", "Java 문법, OOP 원칙, Spring Boot 프로젝트 구조"},
-                {"REST API 설계", "RESTful API 원칙, Spring MVC, JPA 연동"},
-                {"인증 & 보안", "JWT, Spring Security, OAuth2 소셜 로그인"},
-                {"배포 & DevOps", "Docker, CI/CD 파이프라인, 클라우드 배포"},
-        };
-
-        for (int i = 0; i < weekData.length; i++) {
-            course.getWeeks().add(CourseWeek.builder()
-                    .course(course)
-                    .weekNo(i + 1)
-                    .title(weekData[i][0])
-                    .summary(weekData[i][1])
-                    .build());
-        }
-
-        em.persist(course);
-        em.flush();
-
-        log.info("[MockDataSeeder] Created course id={} with {} weeks", course.getId(), course.getWeeks().size());
-
-        // ── 3. Curriculum Skills (6) ────────────────────────────────────
-        String[][] skillData = {
-                {"HTML/CSS", "시맨틱 마크업과 반응형 레이아웃 구현 능력", "EASY"},
-                {"JavaScript 기초", "변수, 함수, 스코프, 비동기 처리 이해", "EASY"},
-                {"React 컴포넌트", "함수형 컴포넌트, Hooks, 상태관리 패턴", "MEDIUM"},
-                {"재귀 함수", "재귀적 문제 분해와 호출 스택 이해", "HARD"},
-                {"REST API", "RESTful 설계 원칙과 HTTP 메서드 활용", "MEDIUM"},
-                {"Spring Security", "인증/인가 메커니즘과 JWT 토큰 관리", "HARD"},
-        };
-
-        List<CurriculumSkill> skills = new ArrayList<>();
-        for (String[] sd : skillData) {
-            CurriculumSkill skill = CurriculumSkill.builder()
-                    .course(course)
-                    .name(sd[0])
-                    .description(sd[1])
-                    .difficulty(sd[2])
-                    .build();
-            em.persist(skill);
-            skills.add(skill);
-        }
-
-        skills.get(2).getPrerequisites().add(skills.get(1)); // React -> JS
-        skills.get(4).getPrerequisites().add(skills.get(1)); // REST API -> JS
-        skills.get(5).getPrerequisites().add(skills.get(4)); // Spring Security -> REST API
-
-        em.flush();
-        log.info("[MockDataSeeder] Created {} curriculum skills", skills.size());
-
-        // ── 4. Course Enrollments for all 10 students ───────────────────
-        for (User student : students) {
-            courseEnrollmentRepository.save(CourseEnrollment.builder()
-                    .course(course)
-                    .student(student)
-                    .status("ACTIVE")
-                    .build());
-        }
-        log.info("[MockDataSeeder] Created 10 course enrollments");
-
-        // ── 5. Student Twins (varying risk levels) ──────────────────────
-        // High risk (3): students[0], students[3], students[6]
-        // Medium risk (2): students[2], students[8]
-        // Low risk (5): students[1], students[4], students[5], students[7], students[9]
-
-        BigDecimal[][] twinScores = {
-                // mastery, execution, retentionRisk, motivation, consultationNeed, overallRisk
-                {bd("42.50"), bd("35.00"), bd("72.00"), bd("38.00"), bd("75.00"), bd("68.00")}, // 0 김민준 - high
-                {bd("85.00"), bd("88.00"), bd("12.00"), bd("90.00"), bd("10.00"), bd("15.00")}, // 1 이서연 - low
-                {bd("60.00"), bd("55.00"), bd("45.00"), bd("62.00"), bd("50.00"), bd("42.00")}, // 2 박지훈 - medium
-                {bd("35.00"), bd("28.00"), bd("78.00"), bd("30.00"), bd("82.00"), bd("75.00")}, // 3 최은서 - high
-                {bd("78.00"), bd("80.00"), bd("18.00"), bd("82.00"), bd("15.00"), bd("20.00")}, // 4 정현우 - low
-                {bd("82.00"), bd("76.00"), bd("20.00"), bd("85.00"), bd("12.00"), bd("18.00")}, // 5 강수빈 - low
-                {bd("38.00"), bd("32.00"), bd("68.00"), bd("35.00"), bd("70.00"), bd("65.00")}, // 6 윤도현 - high
-                {bd("75.00"), bd("72.00"), bd("22.00"), bd("78.00"), bd("20.00"), bd("25.00")}, // 7 장하은 - low
-                {bd("55.00"), bd("50.00"), bd("50.00"), bd("58.00"), bd("55.00"), bd("48.00")}, // 8 임태양 - medium
-                {bd("88.00"), bd("90.00"), bd("8.00"),  bd("92.00"), bd("8.00"),  bd("10.00")}, // 9 한서진 - low
-        };
-
-        String[] twinInsights = {
-                "김민준 학생은 HTML/CSS 기초가 약하고 재귀 함수 이해도가 매우 낮습니다. 자신감 부족으로 학습 동기가 떨어지고 있어 즉각적인 상담이 필요합니다.",
-                "이서연 학생은 전반적으로 우수한 성적을 보이고 있습니다. 특히 React와 JavaScript에서 뛰어난 실력을 발휘하고 있으며, 스터디 그룹 리더로 적합합니다.",
-                "박지훈 학생은 중간 수준의 이해도를 보이고 있습니다. JavaScript 기초는 양호하나 REST API 설계에서 추가 학습이 필요합니다.",
-                "최은서 학생은 전반적인 이해도가 낮고 특히 React와 Spring Security에서 큰 어려움을 겪고 있습니다. 기초부터 단계별 학습 계획이 필요합니다.",
-                "정현우 학생은 안정적인 학습 성과를 보이고 있습니다. 코드 실습 참여도가 높고 꾸준한 복습으로 기억 유지율이 좋습니다.",
-                "강수빈 학생은 높은 이해도와 동기부여를 보입니다. JavaScript와 React에서 특히 우수하며, 다른 학생들의 멘토 역할이 가능합니다.",
-                "윤도현 학생은 학습 참여도가 저조하고 복습 이행률이 낮습니다. 재귀 함수와 Spring Security 이해도가 매우 낮아 집중 지원이 필요합니다.",
-                "장하은 학생은 꾸준한 성장세를 보이고 있습니다. HTML/CSS와 JavaScript에서 좋은 성적을 유지하고 있으며, React 심화 학습 중입니다.",
-                "임태양 학생은 중간 수준의 이해도를 보이며, 동기부여 점수가 다소 떨어지고 있습니다. 실습 위주 학습과 스터디 그룹 참여를 권장합니다.",
-                "한서진 학생은 최상위 성적을 유지하고 있으며, 모든 영역에서 우수합니다. 심화 과제와 프로젝트 리더 역할을 맡길 수 있습니다.",
-        };
-
-        StudentTwin[] twins = new StudentTwin[10];
-        for (int i = 0; i < 10; i++) {
-            twins[i] = studentTwinRepository.save(StudentTwin.builder()
-                    .student(students[i])
-                    .course(course)
-                    .masteryScore(twinScores[i][0])
-                    .executionScore(twinScores[i][1])
-                    .retentionRiskScore(twinScores[i][2])
-                    .motivationScore(twinScores[i][3])
-                    .consultationNeedScore(twinScores[i][4])
-                    .overallRiskScore(twinScores[i][5])
-                    .aiInsight(twinInsights[i])
-                    .build());
-        }
-        log.info("[MockDataSeeder] Created 10 student twins");
-
-        // ── 6. Skill Mastery Snapshots (2-3 per student per skill) ──────
+        String pw = passwordEncoder.encode("password123");
         Random rng = new Random(42);
-        for (int si = 0; si < 10; si++) {
-            double baseFactor = twinScores[si][0].doubleValue() / 100.0; // scale based on mastery
-            for (int ski = 0; ski < skills.size(); ski++) {
-                int snapshotCount = 2 + rng.nextInt(2); // 2 or 3
-                for (int snap = 0; snap < snapshotCount; snap++) {
-                    double variance = (rng.nextDouble() - 0.5) * 20;
-                    double understanding = clamp(baseFactor * 85 + variance + ski * (-3), 5, 98);
-                    double practice = clamp(baseFactor * 80 + variance + ski * (-4), 5, 98);
-                    double confidence = clamp(baseFactor * 82 + variance + ski * (-2), 5, 98);
-                    double forgetting = clamp((1 - baseFactor) * 60 + Math.abs(variance) + ski * 3, 2, 90);
 
+        String[] lns = {"김","이","박","최","정","강","윤","장","임","한","오","서","신","권","황","안","송","류","홍","전"};
+        String[] fns = {"민준","서연","지훈","은서","현우","수빈","도현","하은","태양","서진","예준","지우","시우","하윤","주원","지아","현서","채원","준서","유나",
+                "도윤","서윤","건우","민서","은우","소율","우진","지민","재현","다은","시현","예린","승현","연우","규민","하린","정우","수아","지환","유진",
+                "성민","나윤","찬영","이서","진우","아인","동현","소윤","태민","시은"};
+
+        // ── Users ──────────────────────────────────────────────────────
+        User ins1 = userRepository.save(User.builder().email("instructor01@classpulse.dev").passwordHash(pw).name("박지훈(강사)").role(User.Role.INSTRUCTOR).build());
+        User ins2 = userRepository.save(User.builder().email("instructor02@classpulse.dev").passwordHash(pw).name("이영수(강사)").role(User.Role.INSTRUCTOR).build());
+        User ins3 = userRepository.save(User.builder().email("instructor03@classpulse.dev").passwordHash(pw).name("김하나(강사)").role(User.Role.INSTRUCTOR).build());
+        userRepository.save(User.builder().email("operator@classpulse.dev").passwordHash(pw).name("관리자").role(User.Role.OPERATOR).build());
+        User[] ins = {ins1, ins2, ins3};
+
+        User[] stu = new User[N];
+        for (int i = 0; i < N; i++) {
+            stu[i] = userRepository.save(User.builder()
+                    .email(String.format("student%03d@classpulse.dev", i + 1))
+                    .passwordHash(pw).name(lns[i % lns.length] + fns[i % fns.length]).role(User.Role.STUDENT).build());
+        }
+
+        // ── Courses (3) ───────────────────────────────────────────────
+        Course c1 = mkCourse("풀스택 웹개발 부트캠프", "HTML/CSS부터 React, Spring Boot까지 16주 완성", ins1, new String[][]{
+                {"HTML & CSS 기초","시맨틱 HTML, Flexbox, Grid"},{"JavaScript 핵심","변수, 함수, 비동기"},
+                {"React 기초","컴포넌트, Hooks, State"},{"React 심화","Context, 커스텀 훅, 최적화"},
+                {"Java & Spring","OOP, Spring Boot 구조"},{"REST API","RESTful 설계, JPA"},
+                {"인증 & 보안","JWT, Spring Security"},{"배포 & DevOps","Docker, CI/CD"}});
+        Course c2 = mkCourse("데이터 분석 with Python", "Pandas, NumPy, Matplotlib 데이터 분석", ins2, new String[][]{
+                {"Python 기초","변수, 함수, 클래스"},{"NumPy & Pandas","배열, DataFrame"},
+                {"데이터 시각화","Matplotlib, Seaborn"},{"통계 기초","기술통계, 가설검정"},
+                {"머신러닝 입문","회귀, 분류"},{"프로젝트","실전 분석"}});
+        Course c3 = mkCourse("UI/UX 디자인 실무", "Figma UI 디자인과 UX 설계", ins3, new String[][]{
+                {"디자인 원칙","색상, 타이포, 레이아웃"},{"Figma 기초","컴포넌트, 오토레이아웃"},
+                {"와이어프레임","정보 구조, 네비게이션"},{"프로토타이핑","인터랙션, 애니메이션"},
+                {"UX 리서치","사용성 테스트, A/B"}});
+        Course[] cs = {c1, c2, c3};
+
+        // ── Skills ────────────────────────────────────────────────────
+        List<CurriculumSkill> sk1 = mkSkills(c1, new String[][]{
+                {"HTML/CSS","시맨틱 마크업과 반응형 레이아웃","EASY"},{"JavaScript 기초","변수, 함수, 스코프, 비동기","EASY"},
+                {"React 컴포넌트","Hooks, 상태관리 패턴","MEDIUM"},{"재귀 함수","재귀적 문제 분해","HARD"},
+                {"REST API","RESTful 설계 원칙","MEDIUM"},{"Spring Security","JWT 인증/인가","HARD"}});
+        List<CurriculumSkill> sk2 = mkSkills(c2, new String[][]{
+                {"Python 문법","변수, 함수, 클래스","EASY"},{"Pandas","DataFrame, 그룹핑","MEDIUM"},
+                {"데이터 시각화","차트 작성","MEDIUM"},{"통계 분석","확률분포, 가설검정","HARD"},{"머신러닝 기초","Scikit-learn","HARD"}});
+        List<CurriculumSkill> sk3 = mkSkills(c3, new String[][]{
+                {"색상/타이포","색상 이론, 서체","EASY"},{"Figma 도구","컴포넌트, 변수","MEDIUM"},
+                {"와이어프레임","정보 구조 설계","MEDIUM"},{"프로토타이핑","인터랙션 설계","HARD"}});
+        em.flush();
+        List<List<CurriculumSkill>> allSk = List.of(sk1, sk2, sk3);
+
+        // ── Enrollments ───────────────────────────────────────────────
+        for (int i = 0; i < N; i++) {
+            if (i < 70) enroll(stu[i], c1);
+            if (i >= 30 && i < 90) enroll(stu[i], c2);
+            if (i >= 60) enroll(stu[i], c3);
+        }
+
+        // ── Twins (all 100) ───────────────────────────────────────────
+        for (int i = 0; i < N; i++) {
+            int ci = i < 70 ? 0 : (i < 90 ? 1 : 2);
+            double f = rng.nextDouble();
+            double m, e, rr, mo, cn, or2;
+            if (f < 0.20) { m=25+rng.nextDouble()*20; e=20+rng.nextDouble()*20; rr=60+rng.nextDouble()*25; mo=25+rng.nextDouble()*20; cn=65+rng.nextDouble()*20; or2=60+rng.nextDouble()*20; }
+            else if (f < 0.50) { m=50+rng.nextDouble()*20; e=45+rng.nextDouble()*25; rr=30+rng.nextDouble()*25; mo=50+rng.nextDouble()*20; cn=35+rng.nextDouble()*25; or2=35+rng.nextDouble()*20; }
+            else { m=72+rng.nextDouble()*25; e=70+rng.nextDouble()*25; rr=5+rng.nextDouble()*20; mo=75+rng.nextDouble()*22; cn=5+rng.nextDouble()*20; or2=8+rng.nextDouble()*20; }
+            CurriculumSkill weak = allSk.get(ci).get(rng.nextInt(allSk.get(ci).size()));
+            CurriculumSkill strong = allSk.get(ci).get(rng.nextInt(allSk.get(ci).size()));
+            String insight = or2 >= 60
+                    ? String.format("%s 학생은 이해도 %.0f%%로 위험도가 높습니다. %s에서 즉각적인 학습 개입이 필요합니다.", stu[i].getName(), m, weak.getName())
+                    : or2 >= 35
+                    ? String.format("%s 학생은 중간 수준(%.0f%%)입니다. %s는 양호하나 %s에서 추가 학습이 필요합니다.", stu[i].getName(), m, strong.getName(), weak.getName())
+                    : String.format("%s 학생은 우수한 성과(%.0f%%)를 보입니다. %s에서 특히 뛰어나며, 스터디 리더로 적합합니다.", stu[i].getName(), m, strong.getName());
+            studentTwinRepository.save(StudentTwin.builder().student(stu[i]).course(cs[ci])
+                    .masteryScore(bd(m)).executionScore(bd(e)).retentionRiskScore(bd(rr))
+                    .motivationScore(bd(mo)).consultationNeedScore(bd(cn)).overallRiskScore(bd(or2))
+                    .aiInsight(insight).build());
+        }
+        log.info("[Seed] Twins done");
+
+        // ── Skill Mastery (3-5 snapshots per skill per student) ───────
+        for (int i = 0; i < N; i++) {
+            int ci = i < 70 ? 0 : (i < 90 ? 1 : 2);
+            for (CurriculumSkill sk : allSk.get(ci)) {
+                int cnt = 3 + rng.nextInt(3);
+                for (int s = 0; s < cnt; s++) {
+                    double b = 30 + rng.nextDouble() * 60;
                     snapshotRepository.save(SkillMasterySnapshot.builder()
-                            .student(students[si])
-                            .course(course)
-                            .skill(skills.get(ski))
-                            .understandingScore(bd(understanding))
-                            .practiceScore(bd(practice))
-                            .confidenceScore(bd(confidence))
-                            .forgettingRiskScore(bd(forgetting))
-                            .sourceType(snap == 0 ? "REFLECTION_ANALYSIS" : "CODE_ANALYSIS")
-                            .build());
+                            .student(stu[i]).course(cs[ci]).skill(sk)
+                            .understandingScore(bd(clamp(b + rng.nextGaussian() * 10, 5, 98)))
+                            .practiceScore(bd(clamp(b - 5 + rng.nextGaussian() * 12, 5, 98)))
+                            .confidenceScore(bd(clamp(b + 2 + rng.nextGaussian() * 10, 5, 98)))
+                            .forgettingRiskScore(bd(clamp(90 - b + rng.nextGaussian() * 10, 2, 90)))
+                            .sourceType(s % 2 == 0 ? "REFLECTION_ANALYSIS" : "CODE_ANALYSIS").build());
                 }
             }
         }
-        log.info("[MockDataSeeder] Created skill mastery snapshots for all students");
+        log.info("[Seed] Skill mastery done");
 
-        // ── 7. Review Tasks (3-5 per student) ───────────────────────────
-        String[][] taskTemplates = {
-                {"기본 개념 복습", "이해도가 낮아 기본 개념부터 복습이 필요합니다."},
-                {"실습 과제 재도전", "실습 점수가 낮아 추가 연습이 필요합니다."},
-                {"심화 문제 풀이", "기초는 탄탄하지만 심화 문제 연습이 필요합니다."},
-                {"코드 리팩토링 연습", "코드 품질 향상을 위한 리팩토링 연습을 해보세요."},
-                {"개념 정리 노트 작성", "핵심 개념을 정리하여 장기 기억으로 전환하세요."},
+        // ── Review Tasks (15-20 per student) ──────────────────────────
+        String[][] rtTpl = {
+                {"기본 개념 복습","이해도가 낮아 기본 개념부터 복습이 필요합니다."},
+                {"실습 과제 재도전","실습 점수가 낮아 추가 연습이 필요합니다."},
+                {"심화 문제 풀이","기초는 탄탄하지만 심화 연습이 필요합니다."},
+                {"코드 리팩토링 연습","코드 품질 향상을 위한 리팩토링을 해보세요."},
+                {"개념 정리 노트","핵심 개념을 정리하여 장기 기억으로 전환하세요."},
+                {"페어 프로그래밍","동료와 함께 문제를 풀어보세요."},
+                {"오류 디버깅 실습","에러를 분석하고 해결하는 연습을 하세요."},
+                {"프로젝트 적용","배운 개념을 미니 프로젝트에 적용해보세요."},
+                {"핵심 알고리즘 복습","기본 알고리즘을 복습하세요."},
+                {"테스트 코드 작성","작성한 코드에 테스트를 추가해보세요."},
         };
-        String[] taskStatuses = {"PENDING", "PENDING", "IN_PROGRESS", "COMPLETED", "SKIPPED"};
-
-        for (int si = 0; si < 10; si++) {
-            int taskCount = 3 + rng.nextInt(3); // 3-5
-            for (int t = 0; t < taskCount; t++) {
-                int tmplIdx = t % taskTemplates.length;
-                CurriculumSkill skill = skills.get(rng.nextInt(skills.size()));
-                String status = taskStatuses[t % taskStatuses.length];
-                LocalDate scheduledFor = LocalDate.now().minusDays(rng.nextInt(10)).plusDays(rng.nextInt(5));
-
-                ReviewTask task = ReviewTask.builder()
-                        .student(students[si])
-                        .course(course)
-                        .skill(skill)
-                        .title(skill.getName() + " " + taskTemplates[tmplIdx][0])
-                        .reasonSummary(taskTemplates[tmplIdx][1])
-                        .scheduledFor(scheduledFor)
-                        .status(status)
-                        .build();
-                if ("COMPLETED".equals(status)) {
-                    task.setCompletedAt(LocalDateTime.now().minusDays(rng.nextInt(5)));
-                }
+        String[] rtStat = {"PENDING","PENDING","IN_PROGRESS","IN_PROGRESS","COMPLETED","COMPLETED","COMPLETED","COMPLETED","SKIPPED","PENDING"};
+        for (int i = 0; i < N; i++) {
+            int ci = i < 70 ? 0 : (i < 90 ? 1 : 2);
+            List<CurriculumSkill> sks = allSk.get(ci);
+            int cnt = 15 + rng.nextInt(6);
+            for (int t = 0; t < cnt; t++) {
+                int ti = t % rtTpl.length;
+                CurriculumSkill sk = sks.get(t % sks.size());
+                String st = rtStat[t % rtStat.length];
+                LocalDate sched = LocalDate.now().minusDays(rng.nextInt(21)).plusDays(rng.nextInt(7));
+                ReviewTask task = ReviewTask.builder().student(stu[i]).course(cs[ci]).skill(sk)
+                        .title(sk.getName() + " " + rtTpl[ti][0]).reasonSummary(rtTpl[ti][1])
+                        .scheduledFor(sched).status(st).build();
+                if ("COMPLETED".equals(st)) task.setCompletedAt(LocalDateTime.now().minusDays(rng.nextInt(14)));
                 reviewTaskRepository.save(task);
             }
         }
-        log.info("[MockDataSeeder] Created review tasks for all 10 students");
+        log.info("[Seed] Review tasks done");
 
-        // ── 8. Reflections (2-3 per student) ────────────────────────────
-        String[][] reflectionTemplates = {
-                {"오늘 %s를 배웠는데, 기본 개념은 이해했지만 응용 부분이 아직 어렵다. 더 연습이 필요할 것 같다.",
-                 "응용 문제에서 막히는 부분", "혼란", "호기심"},
-                {"드디어 %s 개념을 이해했다! 실습을 통해 직접 해보니 이론으로만 보던 것과는 다르게 느껴진다.",
-                 null, "성취감", "자신감"},
-                {"%s 관련 과제를 제출했는데, 피드백에서 몇 가지 개선점이 있었다. 다음에는 더 잘할 수 있을 것 같다.",
-                 "에러 핸들링 부분", "약간의 아쉬움", "의지"},
+        // ── Reflections (10-15 per student) ───────────────────────────
+        String[][] rfTpl = {
+                {"오늘 %s를 배웠는데, 기본 개념은 이해했지만 응용이 어렵다.","응용 문제에서 막힘","혼란","호기심"},
+                {"드디어 %s 개념을 이해했다! 실습으로 해보니 이론과 다르게 느껴진다.",null,"성취감","자신감"},
+                {"%s 과제 피드백에서 개선점이 있었다. 다음에는 더 잘할 수 있을 것 같다.","에러 핸들링","아쉬움","의지"},
+                {"%s 수업에서 새로운 패턴을 배웠다. 기존 코드를 리팩토링하고 싶다.",null,"흥미","동기부여"},
+                {"%s 관련 스터디에서 동료의 코드를 보고 새로운 시각을 얻었다.",null,"감탄","성장"},
+                {"오늘 %s 실습을 2시간 연속으로 했다. 집중력이 많이 좋아졌다.",null,"뿌듯함","에너지"},
+                {"%s에서 에러가 계속 나서 힘들었지만 결국 해결했다.","에러 원인 파악","좌절→성취","인내"},
+                {"강사님의 %s 피드백을 받고 방향이 확실해졌다. 더 열심히 해야겠다.",null,"감사","결의"},
+                {"%s 개념을 노트에 정리했더니 머릿속이 깔끔해졌다.",null,"정리됨","명확함"},
+                {"오늘 %s 코드 리뷰를 받았는데 생각보다 좋은 평가를 받았다.",null,"놀람","자신감"},
+                {"%s 관련 유튜브 강의를 추가로 봤다. 다른 관점에서 이해가 됐다.",null,"깨달음","호기심"},
+                {"%s 복습을 했는데 2주 전에 배운 것이 기억나지 않아 다시 시작했다.","기억 유지 어려움","걱정","각오"},
         };
-
-        for (int si = 0; si < 10; si++) {
-            int refCount = 2 + rng.nextInt(2); // 2-3
-            for (int r = 0; r < refCount; r++) {
-                int tmplIdx = r % reflectionTemplates.length;
-                CurriculumSkill skill = skills.get(rng.nextInt(skills.size()));
-                int confidence = 1 + rng.nextInt(5);
-                double intensity = 0.3 + rng.nextDouble() * 0.6;
-
-                reflectionRepository.save(Reflection.builder()
-                        .student(students[si])
-                        .course(course)
-                        .content(String.format(reflectionTemplates[tmplIdx][0], skill.getName()))
-                        .stuckPoint(reflectionTemplates[tmplIdx][1])
-                        .selfConfidenceScore(confidence)
-                        .emotionSummary(Map.of(
-                                "primary", reflectionTemplates[tmplIdx][2],
-                                "secondary", reflectionTemplates[tmplIdx][3],
-                                "intensity", Math.round(intensity * 100.0) / 100.0
-                        ))
-                        .aiAnalysisJson(Map.of(
-                                "knowledgeGaps", List.of(skill.getName() + " 심화"),
-                                "strengths", List.of(skill.getName() + " 기본 이해"),
-                                "suggestion", skill.getName() + " 관련 추가 실습을 권장합니다."
-                        ))
+        for (int i = 0; i < N; i++) {
+            int ci = i < 70 ? 0 : (i < 90 ? 1 : 2);
+            List<CurriculumSkill> sks = allSk.get(ci);
+            int cnt = 10 + rng.nextInt(6);
+            for (int r = 0; r < cnt; r++) {
+                int ti = r % rfTpl.length;
+                CurriculumSkill sk = sks.get(r % sks.size());
+                reflectionRepository.save(Reflection.builder().student(stu[i]).course(cs[ci])
+                        .content(String.format(rfTpl[ti][0], sk.getName())).stuckPoint(rfTpl[ti][1])
+                        .selfConfidenceScore(1 + rng.nextInt(5))
+                        .emotionSummary(Map.of("primary", rfTpl[ti][2], "secondary", rfTpl[ti][3]))
+                        .aiAnalysisJson(Map.of("knowledgeGaps", List.of(sk.getName() + " 심화"),
+                                "strengths", List.of(sk.getName() + " 기본"), "suggestion", sk.getName() + " 추가 실습 권장"))
                         .build());
             }
         }
-        log.info("[MockDataSeeder] Created reflections for all 10 students");
+        log.info("[Seed] Reflections done");
 
-        // ── 9. Consultations (8 total) ──────────────────────────────────
-        // 3 scheduled, 5 completed
-        Consultation[] completedConsults = new Consultation[5];
-
-        // Scheduled consultations
-        consultationRepository.save(Consultation.builder()
-                .student(students[0]).instructor(instructor1).course(course)
-                .scheduledAt(LocalDateTime.now().plusDays(2).withHour(14).withMinute(0))
-                .status("SCHEDULED")
-                .notes("김민준 학생 재귀 함수 및 기초 학습 전략 상담")
-                .briefingJson(Map.of(
-                        "twinSummary", "전반적 이해도 42.5%, 위험도 68%",
-                        "weakSkills", List.of("재귀 함수", "REST API"),
-                        "suggestedTopics", List.of("기초 개념 재학습", "단계별 학습 계획")))
-                .build());
-
-        consultationRepository.save(Consultation.builder()
-                .student(students[3]).instructor(instructor1).course(course)
-                .scheduledAt(LocalDateTime.now().plusDays(3).withHour(10).withMinute(0))
-                .status("SCHEDULED")
-                .notes("최은서 학생 전반적 학습 부진 상담")
-                .briefingJson(Map.of(
-                        "twinSummary", "전반적 이해도 35%, 위험도 75%",
-                        "weakSkills", List.of("React 컴포넌트", "Spring Security"),
-                        "suggestedTopics", List.of("기초 보강", "학습 동기 부여")))
-                .build());
-
-        consultationRepository.save(Consultation.builder()
-                .student(students[6]).instructor(instructor2).course(course)
-                .scheduledAt(LocalDateTime.now().plusDays(4).withHour(15).withMinute(30))
-                .status("SCHEDULED")
-                .notes("윤도현 학생 학습 참여도 개선 상담")
-                .briefingJson(Map.of(
-                        "twinSummary", "참여도 저조, 위험도 65%",
-                        "weakSkills", List.of("재귀 함수", "Spring Security"),
-                        "suggestedTopics", List.of("학습 습관 형성", "목표 설정")))
-                .build());
-
-        // Completed consultations
-        completedConsults[0] = consultationRepository.save(Consultation.builder()
-                .student(students[0]).instructor(instructor1).course(course)
-                .scheduledAt(LocalDateTime.now().minusDays(7).withHour(10).withMinute(0))
-                .status("COMPLETED")
-                .completedAt(LocalDateTime.now().minusDays(7).withHour(10).withMinute(45))
-                .notes("JavaScript 비동기 처리 개념 상담")
-                .summaryText("Promise와 async/await의 차이점 설명. 콜백 지옥 해결 패턴 학습. 에러 핸들링 방법 논의.")
-                .causeAnalysis("비동기 개념의 추상성이 높아 실습 위주 학습이 부족했음")
-                .build());
-
-        completedConsults[1] = consultationRepository.save(Consultation.builder()
-                .student(students[2]).instructor(instructor1).course(course)
-                .scheduledAt(LocalDateTime.now().minusDays(5).withHour(14).withMinute(0))
-                .status("COMPLETED")
-                .completedAt(LocalDateTime.now().minusDays(5).withHour(14).withMinute(50))
-                .notes("REST API 설계 원칙 보충 상담")
-                .summaryText("RESTful 설계 원칙 복습. HTTP 메서드 시맨틱 설명. 실전 API 설계 연습 진행.")
-                .causeAnalysis("이론 학습은 충분하나 실전 적용 경험이 부족")
-                .build());
-
-        completedConsults[2] = consultationRepository.save(Consultation.builder()
-                .student(students[3]).instructor(instructor2).course(course)
-                .scheduledAt(LocalDateTime.now().minusDays(10).withHour(11).withMinute(0))
-                .status("COMPLETED")
-                .completedAt(LocalDateTime.now().minusDays(10).withHour(11).withMinute(40))
-                .notes("React 기초 개념 보충 상담")
-                .summaryText("컴포넌트 라이프사이클과 Hooks 기본 개념 재설명. useState/useEffect 실습 진행.")
-                .causeAnalysis("기초 JavaScript 이해 부족이 React 학습의 장애 요인")
-                .build());
-
-        completedConsults[3] = consultationRepository.save(Consultation.builder()
-                .student(students[6]).instructor(instructor1).course(course)
-                .scheduledAt(LocalDateTime.now().minusDays(3).withHour(16).withMinute(0))
-                .status("COMPLETED")
-                .completedAt(LocalDateTime.now().minusDays(3).withHour(16).withMinute(30))
-                .notes("윤도현 학생 학습 습관 형성 상담")
-                .summaryText("매일 30분 코딩 습관 형성 계획. 복습 스케줄 수립. 스터디 그룹 참여 권유.")
-                .causeAnalysis("학습 습관이 불규칙하고 목표가 모호함")
-                .build());
-
-        completedConsults[4] = consultationRepository.save(Consultation.builder()
-                .student(students[8]).instructor(instructor2).course(course)
-                .scheduledAt(LocalDateTime.now().minusDays(1).withHour(13).withMinute(0))
-                .status("COMPLETED")
-                .completedAt(LocalDateTime.now().minusDays(1).withHour(13).withMinute(45))
-                .notes("임태양 학생 동기부여 및 학습 방향 상담")
-                .summaryText("학습 목표 재설정. 실습 중심 학습 전략 수립. 스터디 그룹 합류 안내.")
-                .causeAnalysis("동기부여 저하와 학습 방향 불확실성이 주요 원인")
-                .build());
-
-        log.info("[MockDataSeeder] Created 8 consultations (3 scheduled, 5 completed)");
-
-        // ── 10. Action Plans (2-3 per completed consultation) ───────────
-        // Consultation 0: 김민준 - JS async
-        actionPlanRepository.save(ActionPlan.builder()
-                .consultation(completedConsults[0]).student(students[0]).course(course)
-                .title("Promise 체이닝 연습 과제")
-                .description("5개의 Promise 체이닝 문제를 풀고 결과를 제출하세요.")
-                .dueDate(LocalDate.now().plusDays(3)).linkedSkill(skills.get(1))
-                .priority("HIGH").status("IN_PROGRESS").build());
-        actionPlanRepository.save(ActionPlan.builder()
-                .consultation(completedConsults[0]).student(students[0]).course(course)
-                .title("async/await 리팩토링")
-                .description("기존 콜백 기반 코드를 async/await으로 리팩토링하세요.")
-                .dueDate(LocalDate.now().plusDays(5)).linkedSkill(skills.get(1))
-                .priority("MEDIUM").status("PENDING").build());
-
-        // Consultation 1: 박지훈 - REST API
-        actionPlanRepository.save(ActionPlan.builder()
-                .consultation(completedConsults[1]).student(students[2]).course(course)
-                .title("REST API 설계 실습")
-                .description("게시판 CRUD API를 설계하고 Swagger 문서를 작성하세요.")
-                .dueDate(LocalDate.now().plusDays(4)).linkedSkill(skills.get(4))
-                .priority("HIGH").status("PENDING").build());
-        actionPlanRepository.save(ActionPlan.builder()
-                .consultation(completedConsults[1]).student(students[2]).course(course)
-                .title("HTTP 상태 코드 정리")
-                .description("주요 HTTP 상태 코드를 정리하고 각 사용 사례를 작성하세요.")
-                .dueDate(LocalDate.now().plusDays(2)).linkedSkill(skills.get(4))
-                .priority("MEDIUM").status("COMPLETED")
-                .completedAt(LocalDateTime.now().minusDays(1)).build());
-
-        // Consultation 2: 최은서 - React
-        actionPlanRepository.save(ActionPlan.builder()
-                .consultation(completedConsults[2]).student(students[3]).course(course)
-                .title("JavaScript 기초 복습 과제")
-                .description("변수, 함수, 스코프에 대한 기본 문제 30개를 풀어보세요.")
-                .dueDate(LocalDate.now().plusDays(7)).linkedSkill(skills.get(1))
-                .priority("HIGH").status("IN_PROGRESS").build());
-        actionPlanRepository.save(ActionPlan.builder()
-                .consultation(completedConsults[2]).student(students[3]).course(course)
-                .title("React useState 미니 프로젝트")
-                .description("간단한 Todo 앱을 만들어 useState 활용을 연습하세요.")
-                .dueDate(LocalDate.now().plusDays(10)).linkedSkill(skills.get(2))
-                .priority("MEDIUM").status("PENDING").build());
-        actionPlanRepository.save(ActionPlan.builder()
-                .consultation(completedConsults[2]).student(students[3]).course(course)
-                .title("매일 코딩 챌린지 참여")
-                .description("매일 1문제씩 알고리즘 문제를 풀어 기초 체력을 키우세요.")
-                .dueDate(LocalDate.now().plusDays(14)).linkedSkill(null)
-                .priority("LOW").status("PENDING").build());
-
-        // Consultation 3: 윤도현 - study habits
-        actionPlanRepository.save(ActionPlan.builder()
-                .consultation(completedConsults[3]).student(students[6]).course(course)
-                .title("매일 30분 코딩 습관 형성")
-                .description("매일 최소 30분 코딩 실습을 하고 활동 로그를 기록하세요.")
-                .dueDate(LocalDate.now().plusDays(14)).linkedSkill(null)
-                .priority("HIGH").status("IN_PROGRESS").build());
-        actionPlanRepository.save(ActionPlan.builder()
-                .consultation(completedConsults[3]).student(students[6]).course(course)
-                .title("스터디 그룹 합류")
-                .description("React 스터디 그룹에 합류하여 함께 학습하세요.")
-                .dueDate(LocalDate.now().plusDays(3)).linkedSkill(skills.get(2))
-                .priority("MEDIUM").status("PENDING").build());
-
-        // Consultation 4: 임태양 - motivation
-        actionPlanRepository.save(ActionPlan.builder()
-                .consultation(completedConsults[4]).student(students[8]).course(course)
-                .title("미니 프로젝트 시작")
-                .description("관심 있는 주제로 미니 프로젝트를 시작하여 학습 동기를 높이세요.")
-                .dueDate(LocalDate.now().plusDays(7)).linkedSkill(null)
-                .priority("HIGH").status("PENDING").build());
-        actionPlanRepository.save(ActionPlan.builder()
-                .consultation(completedConsults[4]).student(students[8]).course(course)
-                .title("주간 학습 목표 설정")
-                .description("매주 월요일에 주간 학습 목표를 설정하고 금요일에 점검하세요.")
-                .dueDate(LocalDate.now().plusDays(5)).linkedSkill(null)
-                .priority("MEDIUM").status("PENDING").build());
-
-        log.info("[MockDataSeeder] Created action plans for completed consultations");
-
-        // ── 11. Recommendations (1-3 per student) ───────────────────────
-        String[][] recTypes = {{"REVIEW", "TWIN_SCORE_DROP"}, {"RESOURCE", "REVIEW_TASK_CREATED"}, {"STUDY_GROUP", "SKILL_IMPROVEMENT"}};
-        String[][] recTemplates = {
-                {"%s 집중 복습 추천", "%s 이해도가 %.0f%%로 낮습니다. 집중 복습을 추천합니다.", "이해도 15%% 향상 예상"},
-                {"%s 실습 자료 추천", "%s 실습 점수 향상을 위한 추가 자료를 추천합니다.", "실습 점수 20%% 향상 예상"},
-                {"%s 스터디 그룹 참여", "%s 실력 향상을 위해 스터디 그룹 참여를 추천합니다.", "협업 능력 및 이해도 향상"},
-        };
-
-        for (int si = 0; si < 10; si++) {
-            int recCount = 1 + rng.nextInt(3); // 1-3
-            for (int r = 0; r < recCount; r++) {
-                int tmplIdx = r % recTemplates.length;
-                CurriculumSkill skill = skills.get(rng.nextInt(skills.size()));
-                double score = twinScores[si][0].doubleValue();
-
-                recommendationRepository.save(Recommendation.builder()
-                        .student(students[si]).course(course)
-                        .recommendationType(recTypes[tmplIdx][0])
-                        .title(String.format(recTemplates[tmplIdx][0], skill.getName()))
-                        .reasonSummary(String.format(recTemplates[tmplIdx][1], skill.getName(), score))
-                        .triggerEvent(recTypes[tmplIdx][1])
-                        .evidencePayload(Map.of(
-                                "skillName", skill.getName(),
-                                "currentScore", score,
-                                "studentName", students[si].getName()))
-                        .expectedOutcome(recTemplates[tmplIdx][2])
-                        .build());
-            }
-        }
-        log.info("[MockDataSeeder] Created recommendations for all students");
-
-        // ── 12. Gamification (varying levels, XP, streaks) ──────────────
-        int[][] gamData = {
-                // level, currentXp, nextLevelXp, streakDays, totalXpEarned
-                {3,  45,  130,  2,   350},   // 0 김민준
-                {10, 180, 280,  21,  3200},  // 1 이서연
-                {6,  90,  200,  8,   1500},  // 2 박지훈
-                {2,  30,  110,  0,   180},   // 3 최은서
-                {8,  150, 250,  14,  2500},  // 4 정현우
-                {9,  200, 265,  18,  2900},  // 5 강수빈
-                {1,  20,  100,  0,   80},    // 6 윤도현
-                {7,  140, 240,  12,  2100},  // 7 장하은
-                {4,  60,  150,  3,   600},   // 8 임태양
-                {12, 100, 350,  30,  4500},  // 9 한서진
-        };
-        String[] levelTitles = {"초보 학습자", "시니어 러너", "열정적 코더", "초보 학습자",
-                                "풀스택 학습자", "풀스택 학습자", "초보 학습자", "풀스택 학습자",
-                                "열정적 코더", "시니어 러너"};
-
-        StudentGamification[] gamifications = new StudentGamification[10];
-        for (int i = 0; i < 10; i++) {
-            gamifications[i] = gamificationRepository.save(StudentGamification.builder()
-                    .student(students[i]).course(course)
-                    .level(gamData[i][0])
-                    .currentXp(gamData[i][1])
-                    .nextLevelXp(gamData[i][2])
-                    .levelTitle(levelTitles[i])
-                    .streakDays(gamData[i][3])
-                    .lastActivityDate(gamData[i][3] > 0 ? LocalDate.now() : LocalDate.now().minusDays(5))
-                    .totalXpEarned(gamData[i][4])
-                    .build());
-        }
-        log.info("[MockDataSeeder] Created gamification state for all 10 students");
-
-        // ── 13. Badges (assign from V3 seed badges) ────────────────────
-        List<Badge> allBadges = badgeRepository.findAll();
-        // Assign 1-5 badges per student based on their level/performance
-        int[][] badgeAssignments = {
-                {0},                    // 김민준: 1 badge
-                {0, 1, 2, 4, 5},        // 이서연: 5 badges
-                {0, 2, 3},              // 박지훈: 3 badges
-                {0},                    // 최은서: 1 badge
-                {0, 1, 2, 4},           // 정현우: 4 badges
-                {0, 1, 2, 3, 4},        // 강수빈: 5 badges
-                {},                     // 윤도현: 0 badges
-                {0, 1, 2},              // 장하은: 3 badges
-                {0, 2},                 // 임태양: 2 badges
-                {0, 1, 2, 3, 4, 5, 7},  // 한서진: 7 badges (top performer)
-        };
-
-        for (int si = 0; si < 10; si++) {
-            for (int badgeIdx : badgeAssignments[si]) {
-                if (badgeIdx < allBadges.size()) {
-                    studentBadgeRepository.save(StudentBadge.builder()
-                            .student(students[si])
-                            .badge(allBadges.get(badgeIdx))
-                            .build());
+        // ── Consultations (5-8 per student, total ~600) ───────────────
+        for (int i = 0; i < N; i++) {
+            int ci = i < 70 ? 0 : (i < 90 ? 1 : 2);
+            int cnt = 5 + rng.nextInt(4);
+            for (int c = 0; c < cnt; c++) {
+                boolean done = c < cnt - 2; // last 2 are scheduled
+                User instr = ins[c % 3];
+                Consultation.ConsultationBuilder cb = Consultation.builder()
+                        .student(stu[i]).instructor(instr).course(cs[ci])
+                        .scheduledAt(done ? LocalDateTime.now().minusDays(1 + c * 3 + rng.nextInt(5)) : LocalDateTime.now().plusDays(1 + c))
+                        .status(done ? "COMPLETED" : "SCHEDULED")
+                        .notes(stu[i].getName() + " 학생 " + (done ? "학습 진행 상담" : "예정 상담"));
+                if (done) {
+                    cb.completedAt(LocalDateTime.now().minusDays(c * 3));
+                    cb.summaryText(stu[i].getName() + " 학생과 취약 영역 보충 및 학습 전략을 논의함. 단계별 액션플랜 수립 완료.");
+                    cb.causeAnalysis("실습 시간 부족과 기초 개념 미흡이 주요 원인으로 파악됨. 자기주도 학습 습관 형성이 핵심.");
+                } else {
+                    cb.briefingJson(Map.of("twinSummary", "학습 현황 점검 예정", "suggestedTopics", List.of("취약 영역 보강", "학습 목표 재설정")));
+                }
+                Consultation saved = consultationRepository.save(cb.build());
+                if (done) {
+                    int apCnt = 1 + rng.nextInt(3);
+                    String[] apTitles = {"취약 스킬 복습 과제", "실습 프로젝트 수행", "매일 30분 코딩 습관", "스터디 그룹 참여", "개념 노트 정리"};
+                    String[] apStats = {"COMPLETED", "IN_PROGRESS", "PENDING"};
+                    for (int a = 0; a < apCnt; a++) {
+                        actionPlanRepository.save(ActionPlan.builder()
+                                .consultation(saved).student(stu[i]).course(cs[ci])
+                                .title(apTitles[a % apTitles.length]).description("상담 결과에 따른 액션플랜입니다.")
+                                .dueDate(LocalDate.now().plusDays(3 + a * 3))
+                                .priority(a == 0 ? "HIGH" : "MEDIUM").status(apStats[a % apStats.length])
+                                .build());
+                    }
                 }
             }
         }
-        log.info("[MockDataSeeder] Assigned V3 badges to students");
+        log.info("[Seed] Consultations done");
 
-        // ── 14. XP Events (5-10 per student) ────────────────────────────
-        String[] eventTypes = {"REFLECTION_SUBMIT", "REVIEW_COMPLETE", "CODE_SUBMIT",
-                               "CONSULTATION_ATTEND", "CHATBOT_INTERACTION", "STUDY_GROUP_JOIN"};
-        int[] eventXpAmounts = {20, 15, 25, 35, 5, 20};
-
-        for (int si = 0; si < 10; si++) {
-            int eventCount = 5 + rng.nextInt(6); // 5-10
-            for (int e = 0; e < eventCount; e++) {
-                int typeIdx = rng.nextInt(eventTypes.length);
-                xpEventRepository.save(XPEvent.builder()
-                        .student(students[si]).course(course)
-                        .eventType(eventTypes[typeIdx])
-                        .xpAmount(eventXpAmounts[typeIdx])
-                        .sourceType(eventTypes[typeIdx])
-                        .build());
+        // ── Recommendations (5-8 per student) ─────────────────────────
+        String[][] rcTpl = {
+                {"REVIEW","%s 집중 복습 추천","%s 이해도가 낮습니다. 집중 복습을 추천합니다."},
+                {"RESOURCE","%s 실습 자료 추천","%s 실습 향상을 위한 추가 자료를 추천합니다."},
+                {"STUDY_GROUP","%s 스터디 참여","%s 향상을 위해 스터디 그룹 참여를 추천합니다."},
+                {"REVIEW","%s 반복 학습","%s 기억 유지를 위해 반복 학습이 필요합니다."},
+                {"RESOURCE","%s 심화 콘텐츠","%s 심화 과정 콘텐츠를 추천합니다."},
+                {"REVIEW","%s 오답 분석","%s 관련 자주 틀리는 유형을 분석해보세요."},
+                {"STUDY_GROUP","%s 코드 리뷰 참여","%s 코드 리뷰를 통해 실력을 키워보세요."},
+                {"RESOURCE","%s 프로젝트 추천","배운 %s를 프로젝트에 적용해보세요."},
+        };
+        for (int i = 0; i < N; i++) {
+            int ci = i < 70 ? 0 : (i < 90 ? 1 : 2);
+            List<CurriculumSkill> sks = allSk.get(ci);
+            int cnt = 5 + rng.nextInt(4);
+            for (int r = 0; r < cnt; r++) {
+                int ti = r % rcTpl.length;
+                CurriculumSkill sk = sks.get(r % sks.size());
+                recommendationRepository.save(Recommendation.builder().student(stu[i]).course(cs[ci])
+                        .recommendationType(rcTpl[ti][0]).title(String.format(rcTpl[ti][1], sk.getName()))
+                        .reasonSummary(String.format(rcTpl[ti][2], sk.getName())).triggerEvent("TWIN_SCORE_DROP")
+                        .evidencePayload(Map.of("skillName", sk.getName(), "studentName", stu[i].getName()))
+                        .expectedOutcome("학습 성과 향상 예상").build());
             }
         }
-        log.info("[MockDataSeeder] Created XP events for all students");
+        log.info("[Seed] Recommendations done");
 
-        // ── 15. Conversations (1-2 for first 3 students) ───────────────
-        for (int si = 0; si < 3; si++) {
-            int convCount = 1 + rng.nextInt(2); // 1-2
-            for (int c = 0; c < convCount; c++) {
-                CurriculumSkill skill = skills.get(rng.nextInt(skills.size()));
+        // ── Gamification (all 100, rich) ──────────────────────────────
+        String[] lvlTitles = {"초보 학습자","성장하는 학습자","열정적 코더","중급 개발자","풀스택 학습자",
+                "실력자","시니어 러너","코드 마스터","AI 분석가","풀스택 마스터","전설의 코더","그랜드 마스터"};
+        List<Badge> badges = badgeRepository.findAll();
+        String[] evTypes = {"REFLECTION_SUBMIT","REVIEW_COMPLETE","CODE_SUBMIT","CONSULTATION_ATTEND","CHATBOT_INTERACTION","STUDY_GROUP_JOIN","DAILY_LOGIN","STREAK_BONUS"};
+        int[] evXp = {20, 15, 25, 35, 5, 20, 10, 30};
+
+        for (int i = 0; i < N; i++) {
+            int ci = i < 70 ? 0 : (i < 90 ? 1 : 2);
+            int lvl = 1 + rng.nextInt(12);
+            gamificationRepository.save(StudentGamification.builder().student(stu[i]).course(cs[ci])
+                    .level(lvl).currentXp(rng.nextInt(200)).nextLevelXp(100 + lvl * 30)
+                    .levelTitle(lvlTitles[Math.min(lvl - 1, lvlTitles.length - 1)])
+                    .streakDays(rng.nextInt(30)).lastActivityDate(LocalDate.now().minusDays(rng.nextInt(3)))
+                    .totalXpEarned(lvl * 250 + rng.nextInt(500)).build());
+            int bc = Math.min(lvl / 2, badges.size());
+            for (int b = 0; b < bc; b++) studentBadgeRepository.save(StudentBadge.builder().student(stu[i]).badge(badges.get(b)).build());
+            // 20-30 XP events per student
+            int ec = 20 + rng.nextInt(11);
+            for (int e = 0; e < ec; e++) {
+                int idx = rng.nextInt(evTypes.length);
+                xpEventRepository.save(XPEvent.builder().student(stu[i]).course(cs[ci]).eventType(evTypes[idx]).xpAmount(evXp[idx]).sourceType(evTypes[idx]).build());
+            }
+        }
+        log.info("[Seed] Gamification done");
+
+        // ── Chatbot Conversations (all 100 students, 2-3 convs each) ──
+        String[][] chatQ = {
+                {"이해가 안 되는 부분이 있어요. 도와주세요.","물론이죠! 어떤 부분이 어려우신가요? 기본 개념부터 설명해드릴게요."},
+                {"실습에서 자꾸 에러가 나요.","디버깅은 체계적으로 접근하면 됩니다. 에러 메시지를 먼저 읽어보세요."},
+                {"이 개념을 쉽게 설명해줄 수 있나요?","좋은 질문이에요! 일상 비유로 설명할게요."},
+                {"복습 계획을 세워주세요.","현재 트윈 데이터를 기반으로 맞춤형 복습 계획을 만들어드릴게요."},
+                {"코드 리뷰해줄 수 있나요?","물론이죠! 코드를 보내주시면 개선점을 알려드릴게요."},
+                {"시험 준비 어떻게 하면 좋을까요?","핵심 개념 정리 → 실습 → 모의 문제 순서로 준비하세요."},
+        };
+        for (int i = 0; i < N; i++) {
+            int ci = i < 70 ? 0 : (i < 90 ? 1 : 2);
+            List<CurriculumSkill> sks = allSk.get(ci);
+            int convCnt = 2 + rng.nextInt(2);
+            for (int cv = 0; cv < convCnt; cv++) {
+                CurriculumSkill sk = sks.get(rng.nextInt(sks.size()));
                 Conversation conv = conversationRepository.save(Conversation.builder()
-                        .student(students[si]).course(course)
-                        .title(skill.getName() + " 학습 도우미")
-                        .twinContextJson(Map.of(
-                                "currentSkill", skill.getName(),
-                                "masteryScore", twinScores[si][0].doubleValue(),
-                                "recentReflections", List.of("최근 학습 내용 요약")))
-                        .status("ACTIVE")
-                        .build());
-
-                // 3-5 messages per conversation
-                String[][] msgPairs = {
-                        {"USER", skill.getName() + "에서 이해가 안 되는 부분이 있어요. 도와주세요."},
-                        {"ASSISTANT", "물론이죠! " + skill.getName() + "의 어떤 부분이 어려우신가요? 현재 학습 상태를 보면 기본 개념은 어느 정도 이해하고 계신 것 같아요."},
-                        {"USER", "특히 실습에서 막히는 부분이 많아요. 예제를 보여주실 수 있나요?"},
-                        {"ASSISTANT", "좋은 질문이에요! 간단한 예제부터 시작해볼게요. " + skill.getName() + "의 핵심은 기본 원리를 이해하는 것입니다. 먼저 이 코드를 살펴보세요..."},
-                        {"USER", "아, 이렇게 하면 되는군요! 감사합니다."},
-                };
-                int msgCount = 3 + rng.nextInt(3); // 3-5
-                for (int m = 0; m < msgCount && m < msgPairs.length; m++) {
-                    chatMessageRepository.save(ChatMessage.builder()
-                            .conversation(conv)
-                            .role(msgPairs[m][0])
-                            .content(msgPairs[m][1])
-                            .tokenCount(50 + rng.nextInt(150))
-                            .build());
+                        .student(stu[i]).course(cs[ci]).title(sk.getName() + " 학습 도우미").status("ACTIVE")
+                        .twinContextJson(Map.of("currentSkill", sk.getName())).build());
+                int msgCnt = 4 + rng.nextInt(4); // 4-7 messages
+                for (int msg = 0; msg < msgCnt; msg++) {
+                    int qi = msg / 2 % chatQ.length;
+                    boolean isUser = msg % 2 == 0;
+                    String content = isUser
+                            ? sk.getName() + "에서 " + chatQ[qi][0]
+                            : chatQ[qi][1] + " " + sk.getName() + "의 핵심은 기본 원리를 이해하는 것입니다.";
+                    chatMessageRepository.save(ChatMessage.builder().conversation(conv)
+                            .role(isUser ? "USER" : "ASSISTANT").content(content).tokenCount(50 + rng.nextInt(150)).build());
                 }
             }
         }
-        log.info("[MockDataSeeder] Created chatbot conversations for first 3 students");
+        log.info("[Seed] Chatbot conversations done");
 
-        // ── 16. Code Submissions (3-5 for first 5 students) ────────────
-        String[][] codeTemplates = {
-                {"javascript", "function fibonacci(n) {\n  if (n <= 1) return n;\n  return fibonacci(n - 1) + fibonacci(n - 2);\n}"},
-                {"javascript", "const fetchData = async (url) => {\n  const response = await fetch(url);\n  const data = await response.json();\n  return data;\n}"},
-                {"javascript", "function Counter() {\n  const [count, setCount] = useState(0);\n  return <button onClick={() => setCount(count + 1)}>{count}</button>;\n}"},
-                {"java", "@GetMapping(\"/api/users\")\npublic List<User> getUsers() {\n  return userRepository.findAll();\n}"},
-                {"java", "@PostMapping(\"/api/auth/login\")\npublic ResponseEntity<TokenResponse> login(@RequestBody LoginRequest req) {\n  // authenticate\n}"},
+        // ── Code Submissions (8-12 per student, all 100) ──────────────
+        String[][] codeTpl = {
+                {"javascript","function fibonacci(n) {\n  if (n <= 1) return n;\n  return fibonacci(n - 1) + fibonacci(n - 2);\n}"},
+                {"javascript","const fetchData = async (url) => {\n  try {\n    const res = await fetch(url);\n    return await res.json();\n  } catch (e) {\n    console.error(e);\n  }\n}"},
+                {"javascript","function Counter() {\n  const [count, setCount] = useState(0);\n  return <button onClick={() => setCount(c => c + 1)}>{count}</button>;\n}"},
+                {"python","def merge_sort(arr):\n    if len(arr) <= 1:\n        return arr\n    mid = len(arr) // 2\n    left = merge_sort(arr[:mid])\n    right = merge_sort(arr[mid:])\n    return merge(left, right)"},
+                {"python","import pandas as pd\n\ndef analyze(df):\n    return df.groupby('category').agg({'value': ['mean', 'std', 'count']})"},
+                {"java","@GetMapping(\"/api/users\")\npublic ResponseEntity<List<UserDto>> getUsers() {\n    return ResponseEntity.ok(userService.findAll());\n}"},
+                {"java","public int binarySearch(int[] arr, int target) {\n    int lo = 0, hi = arr.length - 1;\n    while (lo <= hi) {\n        int mid = (lo + hi) / 2;\n        if (arr[mid] == target) return mid;\n        else if (arr[mid] < target) lo = mid + 1;\n        else hi = mid - 1;\n    }\n    return -1;\n}"},
+                {"typescript","interface User {\n  id: number;\n  name: string;\n  email: string;\n}\n\nconst getUser = async (id: number): Promise<User> => {\n  const res = await fetch(`/api/users/${id}`);\n  return res.json();\n}"},
         };
-        String[][] feedbackTemplates = {
-                {"GOOD", "코드 구조가 깔끔합니다.", "현재 상태를 유지하세요."},
-                {"WARNING", "에러 핸들링이 부족합니다.", "try-catch 블록을 추가하세요."},
-                {"ERROR", "무한 재귀의 위험이 있습니다.", "기저 조건을 명확히 설정하세요."},
-                {"INFO", "성능 최적화의 여지가 있습니다.", "메모이제이션을 고려해보세요."},
-                {"GOOD", "RESTful 설계 원칙을 잘 따르고 있습니다.", "계속 이 패턴을 유지하세요."},
+        String[][] fbTpl = {
+                {"GOOD","코드 구조가 깔끔합니다.","현재 상태를 유지하세요."},
+                {"WARNING","에러 핸들링이 부족합니다.","try-catch 블록을 추가하세요."},
+                {"ERROR","무한 재귀 위험이 있습니다.","기저 조건을 명확히 하세요."},
+                {"INFO","성능 최적화 여지가 있습니다.","메모이제이션을 고려해보세요."},
+                {"GOOD","RESTful 원칙을 잘 따르고 있습니다.","이 패턴을 계속 유지하세요."},
+                {"WARNING","변수명이 모호합니다.","의미 있는 이름을 사용하세요."},
+                {"INFO","함수 분리를 고려해보세요.","단일 책임 원칙을 적용하면 좋습니다."},
+                {"GOOD","타입 정의가 잘 되어 있습니다.","TypeScript 활용이 우수합니다."},
         };
-
-        for (int si = 0; si < 5; si++) {
-            int subCount = 3 + rng.nextInt(3); // 3-5
-            for (int s = 0; s < subCount; s++) {
-                int codeIdx = s % codeTemplates.length;
-                CurriculumSkill skill = skills.get(Math.min(codeIdx, skills.size() - 1));
-
-                CodeSubmission submission = codeSubmissionRepository.save(CodeSubmission.builder()
-                        .student(students[si]).course(course).skill(skill)
-                        .codeContent(codeTemplates[codeIdx][1])
-                        .language(codeTemplates[codeIdx][0])
-                        .status("ANALYZED")
-                        .build());
-
-                // 1-3 feedbacks per submission
-                int fbCount = 1 + rng.nextInt(3);
-                for (int f = 0; f < fbCount; f++) {
-                    int fbIdx = (s + f) % feedbackTemplates.length;
-                    boolean twinLinked = rng.nextBoolean();
-                    codeFeedbackRepository.save(CodeFeedback.builder()
-                            .submission(submission)
-                            .lineNumber(1 + rng.nextInt(5))
-                            .endLineNumber(2 + rng.nextInt(5))
-                            .severity(feedbackTemplates[fbIdx][0])
-                            .message(feedbackTemplates[fbIdx][1])
-                            .suggestion(feedbackTemplates[fbIdx][2])
-                            .twinLinked(twinLinked)
-                            .twinSkill(twinLinked ? skill : null)
-                            .build());
+        for (int i = 0; i < N; i++) {
+            int ci = i < 70 ? 0 : (i < 90 ? 1 : 2);
+            List<CurriculumSkill> sks = allSk.get(ci);
+            int cnt = 8 + rng.nextInt(5);
+            for (int s = 0; s < cnt; s++) {
+                int cti = s % codeTpl.length;
+                CurriculumSkill sk = sks.get(s % sks.size());
+                CodeSubmission sub = codeSubmissionRepository.save(CodeSubmission.builder()
+                        .student(stu[i]).course(cs[ci]).skill(sk)
+                        .codeContent(codeTpl[cti][1]).language(codeTpl[cti][0]).status("ANALYZED").build());
+                int fbCnt = 1 + rng.nextInt(3);
+                for (int fb = 0; fb < fbCnt; fb++) {
+                    int fi = (s + fb) % fbTpl.length;
+                    codeFeedbackRepository.save(CodeFeedback.builder().submission(sub)
+                            .lineNumber(1 + rng.nextInt(5)).endLineNumber(2 + rng.nextInt(5))
+                            .severity(fbTpl[fi][0]).message(fbTpl[fi][1]).suggestion(fbTpl[fi][2])
+                            .twinLinked(rng.nextBoolean()).twinSkill(rng.nextBoolean() ? sk : null).build());
                 }
             }
         }
-        log.info("[MockDataSeeder] Created code submissions with feedback for first 5 students");
+        log.info("[Seed] Code submissions done");
 
-        // ── 17. Study Groups (2 groups) ─────────────────────────────────
-        StudyGroup group1 = StudyGroup.builder()
-                .course(course)
-                .name("React 마스터즈")
-                .description("React 심화 학습을 위한 스터디 그룹")
-                .maxMembers(5)
-                .status("ACTIVE")
-                .createdBy(students[1])
-                .build();
-        em.persist(group1);
-
-        // Group 1 members: students[1](leader), [4], [5], [7], [9]
-        addGroupMember(group1, students[1], "LEADER", "React, JavaScript 전문", "그룹 리더 및 멘토", bd("0.95"));
-        addGroupMember(group1, students[4], "MEMBER", "Java, REST API 전문", "백엔드 관점 보완", bd("0.85"));
-        addGroupMember(group1, students[5], "MEMBER", "CSS, React 전문", "UI/UX 관점 제공", bd("0.90"));
-        addGroupMember(group1, students[7], "MEMBER", "HTML/CSS, JavaScript 기초", "프론트엔드 기초 담당", bd("0.80"));
-        addGroupMember(group1, students[9], "MEMBER", "전 분야 우수", "전반적 도움 가능", bd("0.92"));
-
-        StudyGroup group2 = StudyGroup.builder()
-                .course(course)
-                .name("Spring Boot 탐험대")
-                .description("Spring Boot와 백엔드 개발 학습 스터디")
-                .maxMembers(5)
-                .status("ACTIVE")
-                .createdBy(students[4])
-                .build();
-        em.persist(group2);
-
-        // Group 2 members: students[4](leader), [2], [7], [8]
-        addGroupMember(group2, students[4], "LEADER", "REST API, Java 전문", "그룹 리더", bd("0.88"));
-        addGroupMember(group2, students[2], "MEMBER", "JavaScript, REST API 학습 중", "API 설계 함께 학습", bd("0.75"));
-        addGroupMember(group2, students[7], "MEMBER", "HTML/CSS, 기초 Java", "기초부터 함께 성장", bd("0.70"));
-        addGroupMember(group2, students[8], "MEMBER", "JavaScript, 동기부여 필요", "실습 파트너", bd("0.72"));
-
+        // ── Study Groups (20 groups) ──────────────────────────────────
+        String[][] grpData = {
+                {"React 마스터즈","React 심화 학습"},{"Spring Boot 탐험대","백엔드 개발 학습"},
+                {"알고리즘 챌린저스","매일 알고리즘 풀기"},{"풀스택 프로젝트팀","실전 프로젝트"},
+                {"JavaScript 딥다이브","JS 심화"},{"CSS 아티스트","CSS 고급 기법"},
+                {"코드 리뷰 클럽","서로 코드 리뷰"},{"TypeScript 전환반","TS 마이그레이션"},
+                {"Python 데이터팀","데이터 분석"},{"통계 마스터","통계 심화 학습"},
+                {"시각화 크루","데이터 시각화"},{"ML 입문반","머신러닝 기초"},
+                {"UI 디자인 랩","UI 포트폴리오"},{"UX 리서치팀","사용성 테스트"},
+                {"새벽 코딩 크루","아침 코딩 습관"},{"취업 준비반","포트폴리오/면접"},
+                {"해커톤 준비팀","해커톤 대비"},{"오픈소스 기여팀","오픈소스 참여"},
+                {"블로그 작성반","기술 블로그"},{"발표 연습반","기술 발표 연습"},
+        };
+        for (int g = 0; g < grpData.length; g++) {
+            int ci = g < 8 ? 0 : (g < 14 ? 1 : 2);
+            int li = g * 5 % N;
+            StudyGroup grp = StudyGroup.builder().course(cs[ci]).name(grpData[g][0]).description(grpData[g][1])
+                    .maxMembers(5).status("ACTIVE").createdBy(stu[li]).build();
+            em.persist(grp);
+            addMember(grp, stu[li], "LEADER", "그룹 리더", bd(0.95));
+            for (int m = 1; m <= 3; m++) {
+                int mi = (li + m) % N;
+                addMember(grp, stu[mi], "MEMBER", "적극 참여자", bd(0.70 + rng.nextDouble() * 0.25));
+            }
+        }
         em.flush();
-        log.info("[MockDataSeeder] Created 2 study groups");
+        log.info("[Seed] Study groups done");
 
-        log.info("[MockDataSeeder] Demo data seeding complete! (10 students, full data)");
+        log.info("[Seed] Complete! {} students, 3 courses, full data across all tabs.", N);
     }
 
-    // ── Helper methods ──────────────────────────────────────────────────
-
-    private void addGroupMember(StudyGroup group, User student, String role,
-                                 String strength, String complement, BigDecimal matchScore) {
-        StudyGroupMember member = StudyGroupMember.builder()
-                .studyGroup(group)
-                .student(student)
-                .role(role)
-                .strengthSummary(strength)
-                .complementNote(complement)
-                .matchScore(matchScore)
-                .build();
-        group.getMembers().add(member);
+    // ── Helpers ────────────────────────────────────────────────────────
+    private Course mkCourse(String t, String d, User ins, String[][] wks) {
+        Course c = Course.builder().title(t).description(d).status("ACTIVE").createdBy(ins).build();
+        for (int i = 0; i < wks.length; i++) c.getWeeks().add(CourseWeek.builder().course(c).weekNo(i + 1).title(wks[i][0]).summary(wks[i][1]).build());
+        em.persist(c); return c;
     }
-
-    private static BigDecimal bd(String val) {
-        return new BigDecimal(val);
+    private List<CurriculumSkill> mkSkills(Course c, String[][] d) {
+        List<CurriculumSkill> l = new ArrayList<>();
+        for (String[] s : d) { CurriculumSkill sk = CurriculumSkill.builder().course(c).name(s[0]).description(s[1]).difficulty(s[2]).build(); em.persist(sk); l.add(sk); }
+        return l;
     }
-
-    private static BigDecimal bd(double val) {
-        return BigDecimal.valueOf(Math.round(val * 100.0) / 100.0).setScale(2, java.math.RoundingMode.HALF_UP);
+    private void enroll(User s, Course c) { courseEnrollmentRepository.save(CourseEnrollment.builder().course(c).student(s).status("ACTIVE").build()); }
+    private void addMember(StudyGroup g, User s, String role, String str, BigDecimal ms) {
+        g.getMembers().add(StudyGroupMember.builder().studyGroup(g).student(s).role(role).strengthSummary(str).complementNote("상호 보완 학습").matchScore(ms).build());
     }
-
-    private static double clamp(double val, double min, double max) {
-        return Math.max(min, Math.min(max, val));
-    }
+    private static BigDecimal bd(String v) { return new BigDecimal(v); }
+    private static BigDecimal bd(double v) { return BigDecimal.valueOf(Math.round(v * 100.0) / 100.0).setScale(2, java.math.RoundingMode.HALF_UP); }
+    private static double clamp(double v, double min, double max) { return Math.max(min, Math.min(max, v)); }
 }
