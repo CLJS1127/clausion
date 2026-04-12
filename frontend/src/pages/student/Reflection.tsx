@@ -64,7 +64,7 @@ const Reflection: React.FC = () => {
 
   const mutation = useMutation({
     mutationFn: () => {
-      if (!courseId) throw new Error('코스가 선택되지 않았습니다');
+      if (!courseId) throw new Error('과정이 선택되지 않았습니다');
       return reflectionsApi.createReflection({
         courseId: Number(courseId),
         content: [
