@@ -35,27 +35,27 @@ export default function UpcomingConsultationPanel() {
         {consultations.map((c) => (
           <div
             key={c.id}
-            className="flex items-center justify-between p-3 rounded-xl bg-slate-50 border border-slate-100 hover:bg-slate-100 transition-colors"
+            className="flex flex-col sm:flex-row sm:items-center justify-between p-3 rounded-xl bg-slate-50 border border-slate-100 hover:bg-slate-100 transition-colors gap-2"
           >
-            <div className="flex items-center gap-3">
-              <span className="text-sm font-mono font-semibold text-indigo-600 w-12">
+            <div className="flex items-center gap-3 min-w-0">
+              <span className="text-sm font-mono font-semibold text-indigo-600 shrink-0">
                 {c.time}
               </span>
-              <div className="w-7 h-7 rounded-full bg-indigo-100 flex items-center justify-center text-xs font-bold text-indigo-700">
+              <div className="w-7 h-7 rounded-full bg-indigo-100 flex items-center justify-center text-xs font-bold text-indigo-700 shrink-0">
                 {c.studentName.charAt(0)}
               </div>
-              <span className="text-sm text-slate-700 font-medium">{c.studentName}</span>
+              <span className="text-sm text-slate-700 font-medium truncate">{c.studentName}</span>
             </div>
 
             {c.briefingReady ? (
               <button
                 onClick={() => navigate('/instructor/consultations', { state: { showBriefingForId: c.id } })}
-                className="px-2.5 py-1 text-[11px] font-medium rounded-lg bg-indigo-50 text-indigo-600 hover:bg-indigo-100 transition-colors border border-indigo-200"
+                className="px-2.5 py-1 text-[11px] font-medium rounded-lg bg-indigo-50 text-indigo-600 hover:bg-indigo-100 transition-colors border border-indigo-200 shrink-0 self-end sm:self-auto"
               >
                 AI 브리핑 보기
               </button>
             ) : (
-              <span className="text-[11px] text-slate-400">준비 중...</span>
+              <span className="text-[11px] text-slate-400 shrink-0 self-end sm:self-auto">준비 중...</span>
             )}
           </div>
         ))}

@@ -13,7 +13,7 @@ export default function InstructorDashboard() {
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-indigo-50/30">
       {/* Header */}
       <header className="sticky top-0 z-30 bg-white/80 backdrop-blur-md border-b border-slate-100">
-        <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center text-sm font-bold text-indigo-700">
               김
@@ -87,13 +87,13 @@ export default function InstructorDashboard() {
       </header>
 
       {/* Content */}
-      <main className="max-w-7xl mx-auto px-6 py-6 space-y-6">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6 space-y-6">
         {/* Risk Alert Banner */}
         <RiskAlertBanner />
 
         {/* Row 1: Heatmap + Upcoming Consultations */}
-        <div className="grid grid-cols-3 gap-5">
-          <div className="col-span-2">
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+          <div className="lg:col-span-2">
             <RiskHeatmap />
           </div>
           <div>
@@ -102,7 +102,7 @@ export default function InstructorDashboard() {
         </div>
 
         {/* Row 2: Question Review + Course Progress */}
-        <div className="grid grid-cols-2 gap-5">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
           <QuestionReviewPanel />
           <CourseProgressChart />
         </div>
