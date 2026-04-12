@@ -597,7 +597,8 @@ export default function QuestionBank() {
                 <p className="text-xs text-amber-700 mb-2">등록된 스킬이 없습니다. 기본 코딩 스킬을 추가하세요.</p>
                 <button
                   onClick={() => {
-                    coursesApi.createDefaultSkills(courseId!).then(() => {
+                    if (!courseId) { alert('코스를 먼저 생성하세요.'); return; }
+                    coursesApi.createDefaultSkills(courseId).then(() => {
                       queryClient.invalidateQueries({ queryKey: ['courses', courseId, 'skills'] });
                     });
                   }}
