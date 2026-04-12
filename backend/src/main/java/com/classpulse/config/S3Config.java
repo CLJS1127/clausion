@@ -17,10 +17,10 @@ public class S3Config {
     @Value("${app.aws.s3.region:ap-northeast-2}")
     private String region;
 
-    @Value("${app.aws.s3.access-key}")
+    @Value("${app.aws.s3.access-key:}")
     private String accessKey;
 
-    @Value("${app.aws.s3.secret-key}")
+    @Value("${app.aws.s3.secret-key:}")
     private String secretKey;
 
     @Bean

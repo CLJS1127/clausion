@@ -10,7 +10,7 @@ COPY gradle ./gradle
 # Download dependencies (cached layer)
 RUN gradle dependencies --no-daemon || true
 
-# Force no-cache: v5
+# Force no-cache: v6
 COPY src ./src
 RUN gradle bootJar --no-daemon -x test && ls -la build/libs/
 
@@ -28,4 +28,4 @@ USER appuser
 
 EXPOSE 8080
 
-ENTRYPOINT ["java", "-jar", "app.jar"]
+ENTRYPOINT ["sh", "-c", "java -Dapp.jwt.secret=${JWT_SECRET:-default-secret-key-change-in-production-must-be-at-least-256-bits-long} -Dapp.jwt.expiration=${JWT_EXPIRATION:-86400000} -jar app.jar"]
