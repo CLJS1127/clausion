@@ -40,8 +40,7 @@ spring:
     password: ${RABBITMQ_PASSWORD:guest}
 
   autoconfigure:
-    exclude:
-      - org.springframework.boot.autoconfigure.amqp.RabbitAutoConfiguration
+    exclude: []
 
   task:
     execution:
@@ -53,7 +52,7 @@ spring:
 
 app:
   rabbitmq:
-    enabled: false
+    enabled: true
 
   jwt:
     secret: ${JWT_SECRET:default-secret-key-change-in-production-must-be-at-least-256-bits-long}
