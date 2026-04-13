@@ -12,6 +12,7 @@ export default function Register() {
   const [password, setPassword] = useState('');
   const [passwordConfirm, setPasswordConfirm] = useState('');
   const [role, setRole] = useState<User['role']>('STUDENT');
+  const [inviteCode, setInviteCode] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -29,9 +30,14 @@ export default function Register() {
       return;
     }
 
+    if (role === 'INSTRUCTOR' && !inviteCode.trim()) {
+      setError('강사 가입에는 초대 코드가 필요합니다.');
+      return;
+    }
+
     setLoading(true);
     try {
-      await register(email, password, name, role);
+      await register(email, password, name, role, role === 'INSTRUCTOR' ? inviteCode : undefined);
       navigate(`/${role.toLowerCase()}`, { replace: true });
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
@@ -100,6 +106,26 @@ export default function Register() {
                 ))}
               </div>
             </div>
+
+            {/* Invite code for INSTRUCTOR */}
+            {role === 'INSTRUCTOR' && (
+              <div>
+                <label htmlFor="inviteCode" className="block text-sm font-medium text-slate-700 mb-1">
+                  초대 코드
+                </label>
+                <input
+                  id="inviteCode"
+                  type="text"
+                  required
+                  value={inviteCode}
+                  onChange={(e) => setInviteCode(e.target.value.toUpperCase())}
+                  placeholder="8자리 초대 코드"
+                  maxLength={8}
+                  className="w-full px-4 py-2.5 rounded-lg border border-slate-300 bg-white text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-400 transition-all font-mono tracking-widest text-center"
+                />
+                <p className="text-[11px] text-slate-400 mt-1">운영자에게 발급받은 초대 코드를 입력하세요.</p>
+              </div>
+            )}
 
             {/* Name */}
             <div>
