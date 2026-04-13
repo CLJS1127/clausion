@@ -124,19 +124,32 @@ public class CodeAnalysisController {
     public ResponseEntity<SubmissionDetailResponse> getFeedback(@PathVariable Long submissionId) {
         CodeSubmission submission = submissionRepository.findById(submissionId)
                 .orElseThrow(() -> new IllegalArgumentException("Submission not found: " + submissionId));
+        verifyAccessToStudent(submission.getStudent().getId());
         List<CodeFeedback> feedbacks = feedbackRepository.findBySubmissionId(submissionId);
         return ResponseEntity.ok(SubmissionDetailResponse.from(submission, feedbacks));
     }
 
     @GetMapping("/history")
     public ResponseEntity<List<SubmissionDetailResponse>> getHistory(@RequestParam Long studentId) {
+        verifyAccessToStudent(studentId);
         List<CodeSubmission> submissions = submissionRepository.findByStudentIdOrderByCreatedAtDesc(studentId);
+        // Batch-fetch all feedbacks in one query to avoid N+1
+        List<Long> submissionIds = submissions.stream().map(CodeSubmission::getId).toList();
+        Map<Long, List<CodeFeedback>> feedbacksBySubmission = submissionIds.isEmpty()
+                ? Map.of()
+                : feedbackRepository.findBySubmissionIdIn(submissionIds).stream()
+                        .collect(java.util.stream.Collectors.groupingBy(f -> f.getSubmission().getId()));
         return ResponseEntity.ok(submissions.stream()
-                .map(s -> {
-                    List<CodeFeedback> feedbacks = feedbackRepository.findBySubmissionId(s.getId());
-                    return SubmissionDetailResponse.from(s, feedbacks);
-                })
+                .map(s -> SubmissionDetailResponse.from(s, feedbacksBySubmission.getOrDefault(s.getId(), List.of())))
                 .toList());
+    }
+
+    private void verifyAccessToStudent(Long studentId) {
+        Long userId = SecurityUtil.getCurrentUserId();
+        if (userId.equals(studentId)) return;
+        User currentUser = userService.findById(userId);
+        if (currentUser.getRole() == User.Role.INSTRUCTOR) return;
+        throw new SecurityException("Access denied");
     }
 
     // --- Async Service ---

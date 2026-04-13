@@ -82,9 +82,8 @@ export interface StudentTwin {
 
 export interface SkillMasterySnapshot {
   id: string;
-  studentId: string;
-  courseId: string;
   skillId: string;
+  skillName: string;
   understandingScore: number;
   practiceScore: number;
   confidenceScore: number;

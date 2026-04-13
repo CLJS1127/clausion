@@ -4,6 +4,8 @@ import com.classpulse.ai.QuestionGenerator;
 import com.classpulse.config.SecurityUtil;
 import com.classpulse.domain.course.*;
 import com.classpulse.domain.learning.Question;
+import com.classpulse.domain.user.User;
+import com.classpulse.domain.user.UserService;
 import com.classpulse.domain.learning.QuestionRepository;
 import com.classpulse.domain.learning.ReviewTask;
 import com.classpulse.domain.learning.ReviewTaskRepository;
@@ -31,6 +33,7 @@ public class QuestionController {
     private final AsyncJobRepository asyncJobRepository;
     private final QuestionGenerator questionGenerator;
     private final QuestionGenerationService questionGenerationService;
+    private final UserService userService;
 
     // --- DTOs ---
 
@@ -237,6 +240,7 @@ public class QuestionController {
 
     @PutMapping("/api/questions/{id}/approve")
     public ResponseEntity<QuestionResponse> approve(@PathVariable Long id) {
+        verifyInstructorRole();
         Question question = questionRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Question not found: " + id));
         question.setApprovalStatus("APPROVED");
@@ -246,6 +250,7 @@ public class QuestionController {
 
     @PutMapping("/api/questions/{id}/reject")
     public ResponseEntity<QuestionResponse> reject(@PathVariable Long id) {
+        verifyInstructorRole();
         Question question = questionRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Question not found: " + id));
         question.setApprovalStatus("REJECTED");
@@ -302,6 +307,14 @@ public class QuestionController {
                 .orElseThrow(() -> new IllegalArgumentException("Question not found: " + id));
         questionRepository.delete(question);
         return ResponseEntity.noContent().build();
+    }
+
+    private void verifyInstructorRole() {
+        Long userId = SecurityUtil.getCurrentUserId();
+        User currentUser = userService.findById(userId);
+        if (currentUser.getRole() != User.Role.INSTRUCTOR) {
+            throw new SecurityException("강사만 문제를 승인/거부할 수 있습니다.");
+        }
     }
 
     private ReviewTask loadOwnedReviewTask(Long reviewTaskId) {

@@ -245,8 +245,7 @@ public class CurriculumController {
         }
 
         // Find completed curriculum analysis jobs for this course
-        List<AsyncJob> jobs = asyncJobRepository.findAll().stream()
-                .filter(j -> "CURRICULUM_ANALYSIS".equals(j.getJobType()) && "COMPLETED".equals(j.getStatus()))
+        List<AsyncJob> jobs = asyncJobRepository.findByJobTypeAndStatus("CURRICULUM_ANALYSIS", "COMPLETED").stream()
                 .filter(j -> j.getResultPayload() != null && courseId.equals(toLong(j.getResultPayload().get("courseId"))))
                 .toList();
 

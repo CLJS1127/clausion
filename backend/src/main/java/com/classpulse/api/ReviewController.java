@@ -5,6 +5,8 @@ import com.classpulse.domain.course.CourseEnrollmentRepository;
 import com.classpulse.domain.learning.ReviewScheduler;
 import com.classpulse.domain.learning.ReviewTask;
 import com.classpulse.domain.learning.ReviewTaskRepository;
+import com.classpulse.domain.user.User;
+import com.classpulse.domain.user.UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -27,6 +29,7 @@ public class ReviewController {
     private final ReviewTaskRepository reviewTaskRepository;
     private final ReviewScheduler reviewScheduler;
     private final CourseEnrollmentRepository enrollmentRepository;
+    private final UserService userService;
 
     // --- DTOs ---
 
@@ -128,6 +131,7 @@ public class ReviewController {
             @RequestParam Long studentId,
             @RequestParam Long courseId
     ) {
+        verifyAccessToStudent(studentId);
         List<ReviewTask> tasks = reviewTaskRepository
                 .findByStudentIdAndCourseIdOrderByScheduledForDesc(studentId, courseId);
         return ResponseEntity.ok(tasks.stream().map(ReviewTaskResponse::from).toList());
@@ -195,5 +199,13 @@ public class ReviewController {
         }
 
         return ResponseEntity.ok(result);
+    }
+
+    private void verifyAccessToStudent(Long studentId) {
+        Long userId = SecurityUtil.getCurrentUserId();
+        if (userId.equals(studentId)) return;
+        User currentUser = userService.findById(userId);
+        if (currentUser.getRole() == User.Role.INSTRUCTOR) return;
+        throw new SecurityException("Access denied");
     }
 }

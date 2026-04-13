@@ -61,6 +61,9 @@ public class CourseController {
     public ResponseEntity<CourseResponse> create(@RequestBody CreateCourseRequest request) {
         Long userId = SecurityUtil.getCurrentUserId();
         User instructor = userService.findById(userId);
+        if (instructor.getRole() != User.Role.INSTRUCTOR) {
+            throw new SecurityException("강사만 과정을 생성할 수 있습니다.");
+        }
 
         Course course = Course.builder()
                 .title(request.title())
@@ -93,7 +96,7 @@ public class CourseController {
 
         List<CourseResponse> responses = courses.stream()
                 .map(c -> {
-                    int count = enrollmentRepository.findByCourseIdAndStatus(c.getId(), "ACTIVE").size();
+                    int count = (int) enrollmentRepository.countByCourseIdAndStatus(c.getId(), "ACTIVE");
                     return CourseResponse.from(c, count);
                 })
                 .toList();
@@ -104,7 +107,7 @@ public class CourseController {
     public ResponseEntity<CourseResponse> getById(@PathVariable Long id) {
         Course course = courseRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Course not found: " + id));
-        int count = enrollmentRepository.findByCourseIdAndStatus(id, "ACTIVE").size();
+        int count = (int) enrollmentRepository.countByCourseIdAndStatus(id, "ACTIVE");
         return ResponseEntity.ok(CourseResponse.from(course, count));
     }
 

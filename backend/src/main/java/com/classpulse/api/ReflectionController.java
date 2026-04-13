@@ -95,6 +95,7 @@ public class ReflectionController {
     public ResponseEntity<List<ReflectionResponse>> list(
             @RequestParam Long studentId,
             @RequestParam(required = false) Long courseId) {
+        verifyAccessToStudent(studentId);
         List<Reflection> reflections;
         if (courseId != null) {
             reflections = reflectionRepository.findByStudentIdAndCourseIdOrderByCreatedAtDesc(studentId, courseId);
@@ -102,6 +103,14 @@ public class ReflectionController {
             reflections = reflectionRepository.findByStudentIdOrderByCreatedAtDesc(studentId);
         }
         return ResponseEntity.ok(reflections.stream().map(ReflectionResponse::from).toList());
+    }
+
+    private void verifyAccessToStudent(Long studentId) {
+        Long userId = SecurityUtil.getCurrentUserId();
+        if (userId.equals(studentId)) return;
+        User currentUser = userService.findById(userId);
+        if (currentUser.getRole() == User.Role.INSTRUCTOR) return;
+        throw new SecurityException("Access denied");
     }
 
     // --- Async Service ---

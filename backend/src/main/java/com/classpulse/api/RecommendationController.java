@@ -1,7 +1,10 @@
 package com.classpulse.api;
 
+import com.classpulse.config.SecurityUtil;
 import com.classpulse.domain.recommendation.Recommendation;
 import com.classpulse.domain.recommendation.RecommendationRepository;
+import com.classpulse.domain.user.User;
+import com.classpulse.domain.user.UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -16,6 +19,7 @@ import java.util.Map;
 public class RecommendationController {
 
     private final RecommendationRepository recommendationRepository;
+    private final UserService userService;
 
     // --- DTOs ---
 
@@ -49,6 +53,7 @@ public class RecommendationController {
             @PathVariable Long studentId,
             @RequestParam(required = false) Long courseId
     ) {
+        verifyAccessToStudent(studentId);
         List<Recommendation> recommendations;
         if (courseId != null) {
             recommendations = recommendationRepository
@@ -57,5 +62,13 @@ public class RecommendationController {
             recommendations = recommendationRepository.findByStudentIdOrderByCreatedAtDesc(studentId);
         }
         return ResponseEntity.ok(recommendations.stream().map(RecommendationResponse::from).toList());
+    }
+
+    private void verifyAccessToStudent(Long studentId) {
+        Long userId = SecurityUtil.getCurrentUserId();
+        if (userId.equals(studentId)) return;
+        User currentUser = userService.findById(userId);
+        if (currentUser.getRole() == User.Role.INSTRUCTOR) return;
+        throw new SecurityException("Access denied");
     }
 }

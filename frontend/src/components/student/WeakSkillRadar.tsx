@@ -2,7 +2,8 @@ import React from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
 import SVGRadarChart from '../common/SVGRadarChart';
-import { coursesApi } from '../../api/courses';
+import { twinApi } from '../../api/twin';
+import { useAuth } from '../../hooks/useAuth';
 import { useCourseId } from '../../hooks/useCourseId';
 
 interface WeakSkill {
@@ -19,29 +20,38 @@ interface WeakSkillRadarProps {
   courseId?: string;
 }
 
-const WeakSkillRadar: React.FC<WeakSkillRadarProps> = ({ courseId: courseIdProp }) => {
+const WeakSkillRadar: React.FC<WeakSkillRadarProps> = ({ studentId: studentIdProp, courseId: courseIdProp }) => {
+  const { user } = useAuth();
+  const studentId = studentIdProp ?? String(user?.id ?? '');
   const defaultCourseId = useCourseId();
   const courseId = courseIdProp ?? defaultCourseId;
 
   const { data: skills = [] } = useQuery<WeakSkill[]>({
-    queryKey: ['weakSkills', courseId],
+    queryKey: ['weakSkills', studentId, courseId],
     queryFn: async () => {
-      if (!courseId) return [];
-      const allSkills = await coursesApi.getSkills(courseId);
-      // Transform skills into weak skill format (skills with low mastery)
-      return allSkills
-        .filter((s: any) => (s.masteryScore ?? 0) < 60)
+      if (!studentId || !courseId) return [];
+      const snapshots = await twinApi.getTwinHistory(studentId, courseId);
+      // Group by skillId and take the latest snapshot per skill
+      const latestBySkill = new Map<string, typeof snapshots[0]>();
+      for (const s of snapshots) {
+        if (!latestBySkill.has(String(s.skillId))) {
+          latestBySkill.set(String(s.skillId), s);
+        }
+      }
+      // Filter to weak skills (understanding < 60) and take top 5
+      return Array.from(latestBySkill.values())
+        .filter((s) => (s.understandingScore ?? 0) < 60)
         .slice(0, 5)
-        .map((s: any) => ({
-          id: String(s.id),
-          name: s.name,
-          understanding: s.masteryScore ?? 0,
-          practice: s.executionScore ?? 0,
+        .map((s) => ({
+          id: String(s.skillId),
+          name: s.skillName ?? `Skill ${s.skillId}`,
+          understanding: s.understandingScore ?? 0,
+          practice: s.practiceScore ?? 0,
           confidence: s.confidenceScore ?? 0,
-          forgettingRisk: s.retentionRiskScore ?? 0,
+          forgettingRisk: s.forgettingRiskScore ?? 0,
         }));
     },
-    enabled: !!courseId,
+    enabled: !!studentId && !!courseId,
   });
 
   const [selected, setSelected] = React.useState<string>('');

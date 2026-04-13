@@ -6,5 +6,6 @@ import java.util.Optional;
 
 public interface GamificationRepository extends JpaRepository<StudentGamification, Long> {
     Optional<StudentGamification> findByStudentIdAndCourseId(Long studentId, Long courseId);
+    List<StudentGamification> findByStudentId(Long studentId);
     List<StudentGamification> findByCourseIdOrderByTotalXpEarnedDesc(Long courseId);
 }

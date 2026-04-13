@@ -1,6 +1,9 @@
 package com.classpulse.api;
 
+import com.classpulse.config.SecurityUtil;
 import com.classpulse.domain.gamification.*;
+import com.classpulse.domain.user.User;
+import com.classpulse.domain.user.UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -18,6 +21,7 @@ public class GamificationController {
     private final GamificationRepository gamificationRepository;
     private final StudentBadgeRepository studentBadgeRepository;
     private final XPEventRepository xpEventRepository;
+    private final UserService userService;
 
     // --- DTOs ---
 
@@ -79,26 +83,27 @@ public class GamificationController {
     public ResponseEntity<List<GamificationResponse>> getGamification(
             @PathVariable Long studentId,
             @RequestParam(required = false) Long courseId) {
+        verifyAccessToStudent(studentId);
         List<StudentGamification> all;
         if (courseId != null) {
             all = gamificationRepository.findByStudentIdAndCourseId(studentId, courseId)
                     .map(List::of).orElse(List.of());
         } else {
-            all = gamificationRepository.findAll().stream()
-                    .filter(g -> g.getStudent().getId().equals(studentId))
-                    .toList();
+            all = gamificationRepository.findByStudentId(studentId);
         }
         return ResponseEntity.ok(all.stream().map(GamificationResponse::from).toList());
     }
 
     @GetMapping("/{studentId}/badges")
     public ResponseEntity<List<BadgeResponse>> getBadges(@PathVariable Long studentId) {
+        verifyAccessToStudent(studentId);
         List<StudentBadge> badges = studentBadgeRepository.findByStudentId(studentId);
         return ResponseEntity.ok(badges.stream().map(BadgeResponse::from).toList());
     }
 
     @GetMapping("/{studentId}/xp-history")
     public ResponseEntity<List<XPEventResponse>> getXpHistory(@PathVariable Long studentId) {
+        verifyAccessToStudent(studentId);
         List<XPEvent> events = xpEventRepository.findByStudentIdOrderByCreatedAtDesc(studentId);
         return ResponseEntity.ok(events.stream().map(XPEventResponse::from).toList());
     }
@@ -121,5 +126,13 @@ public class GamificationController {
             ));
         }
         return ResponseEntity.ok(leaderboard);
+    }
+
+    private void verifyAccessToStudent(Long studentId) {
+        Long userId = SecurityUtil.getCurrentUserId();
+        if (userId.equals(studentId)) return;
+        User currentUser = userService.findById(userId);
+        if (currentUser.getRole() == User.Role.INSTRUCTOR) return;
+        throw new SecurityException("Access denied");
     }
 }

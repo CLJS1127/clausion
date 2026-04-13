@@ -31,11 +31,13 @@ public class AnnouncementFeedController {
     @GetMapping
     public ResponseEntity<List<Map<String, Object>>> list() {
         User currentUser = getCurrentUser();
+        java.util.Set<Long> readAnnouncementIds = announcementReadRepository.findByUserId(currentUser.getId())
+                .stream().map(AnnouncementRead::getAnnouncementId).collect(java.util.stream.Collectors.toSet());
 
         List<Map<String, Object>> result = announcementRepository.findAllByOrderByCreatedAtDesc()
                 .stream()
                 .filter(announcement -> announcementAudienceService.canUserView(announcement, currentUser))
-                .map(announcement -> toMap(announcement, currentUser.getId()))
+                .map(announcement -> toMap(announcement, readAnnouncementIds.contains(announcement.getId())))
                 .toList();
         return ResponseEntity.ok(result);
     }
@@ -66,9 +68,7 @@ public class AnnouncementFeedController {
                 .orElseThrow(() -> new IllegalArgumentException("사용자를 찾을 수 없습니다: " + userId));
     }
 
-    private Map<String, Object> toMap(Announcement announcement, Long userId) {
-        boolean isRead = announcementReadRepository.findByAnnouncementIdAndUserId(announcement.getId(), userId).isPresent();
-
+    private Map<String, Object> toMap(Announcement announcement, boolean isRead) {
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("id", announcement.getId());
         result.put("title", announcement.getTitle());

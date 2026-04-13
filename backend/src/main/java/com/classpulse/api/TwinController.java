@@ -1,10 +1,13 @@
 package com.classpulse.api;
 
 import com.classpulse.ai.AiJobService;
+import com.classpulse.config.SecurityUtil;
 import com.classpulse.domain.twin.SkillMasterySnapshot;
 import com.classpulse.domain.twin.SkillMasterySnapshotRepository;
 import com.classpulse.domain.twin.StudentTwin;
 import com.classpulse.domain.twin.TwinService;
+import com.classpulse.domain.user.User;
+import com.classpulse.domain.user.UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -22,6 +25,7 @@ public class TwinController {
     private final TwinService twinService;
     private final SkillMasterySnapshotRepository snapshotRepository;
     private final AiJobService aiJobService;
+    private final UserService userService;
 
     // --- DTOs ---
 
@@ -90,6 +94,7 @@ public class TwinController {
     public ResponseEntity<List<TwinResponse>> getTwin(
             @PathVariable Long studentId,
             @RequestParam(required = false) Long courseId) {
+        verifyAccessToStudent(studentId);
         List<StudentTwin> twins = twinService.getStudentTwins(studentId);
         if (courseId != null) {
             twins = twins.stream().filter(t -> t.getCourse().getId().equals(courseId)).toList();
@@ -100,6 +105,7 @@ public class TwinController {
     @PostMapping("/{studentId}/courses/{courseId}/refresh")
     public ResponseEntity<Map<String, String>> refreshTwin(
             @PathVariable Long studentId, @PathVariable Long courseId) {
+        verifyAccessToStudent(studentId);
         aiJobService.runTwinInference(studentId, courseId, "INSTRUCTOR_MANUAL");
         return ResponseEntity.ok(Map.of("status", "PROCESSING",
                 "message", "트윈 추론이 시작되었습니다."));
@@ -110,6 +116,7 @@ public class TwinController {
             @PathVariable Long studentId,
             @RequestParam(required = false) Long courseId
     ) {
+        verifyAccessToStudent(studentId);
         List<SkillMasterySnapshot> snapshots;
         if (courseId != null) {
             snapshots = snapshotRepository.findByStudentIdAndCourseIdOrderByCapturedAtDesc(studentId, courseId);
@@ -117,5 +124,13 @@ public class TwinController {
             snapshots = snapshotRepository.findTop10ByStudentIdOrderByCapturedAtDesc(studentId);
         }
         return ResponseEntity.ok(snapshots.stream().map(SnapshotResponse::from).toList());
+    }
+
+    private void verifyAccessToStudent(Long studentId) {
+        Long userId = SecurityUtil.getCurrentUserId();
+        if (userId.equals(studentId)) return;
+        User currentUser = userService.findById(userId);
+        if (currentUser.getRole() == User.Role.INSTRUCTOR) return;
+        throw new SecurityException("Access denied");
     }
 }
