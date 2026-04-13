@@ -17,7 +17,8 @@ import Modal from '../../components/common/Modal';
 
 type View = 'list' | 'active';
 
-const statusLabel: Record<string, { text: string; color: 'emerald' | 'amber' | 'slate' }> = {
+const statusLabel: Record<string, { text: string; color: 'emerald' | 'amber' | 'slate' | 'indigo' }> = {
+  REQUESTED: { text: '요청됨', color: 'indigo' },
   SCHEDULED: { text: '예정', color: 'amber' },
   IN_PROGRESS: { text: '진행 중', color: 'emerald' },
   COMPLETED: { text: '완료', color: 'slate' },
@@ -51,8 +52,8 @@ export default function Consultations() {
   const [selectedConsultation, setSelectedConsultation] = useState<Consultation | null>(null);
 
   const { data: consultations = [] } = useQuery({
-    queryKey: ['instructor', 'consultations'],
-    queryFn: () => consultationsApi.getConsultations('instructor'),
+    queryKey: ['instructor', 'consultations', courseId],
+    queryFn: () => consultationsApi.getConsultations('instructor', courseId),
     staleTime: 30_000,
   });
 
@@ -180,6 +181,7 @@ export default function Consultations() {
     );
   }
 
+  const requested = consultations.filter((c) => c.status === 'REQUESTED');
   const scheduled = consultations.filter((c) => c.status === 'SCHEDULED');
   const completed = consultations.filter((c) => c.status === 'COMPLETED');
 
@@ -189,7 +191,10 @@ export default function Consultations() {
         <div className="max-w-6xl mx-auto px-6 py-4 flex items-center justify-between">
           <div>
             <h1 className="text-base font-bold text-slate-800">상담 관리</h1>
-            <p className="text-xs text-slate-500">예정 {scheduled.length}건 · 완료 {completed.length}건</p>
+            <p className="text-xs text-slate-500">
+              {requested.length > 0 && <span className="text-indigo-600 font-medium">요청 {requested.length}건 · </span>}
+              예정 {scheduled.length}건 · 완료 {completed.length}건
+            </p>
           </div>
           <button
             onClick={() => setScheduleModalOpen(true)}
@@ -201,6 +206,54 @@ export default function Consultations() {
       </header>
 
       <main className="max-w-6xl mx-auto px-6 py-6 space-y-6">
+        {/* Requested */}
+        {requested.length > 0 && (
+          <div>
+            <h2 className="text-sm font-semibold text-indigo-700 mb-3">학생 상담 요청</h2>
+            <div className="space-y-2">
+              {requested.map((c) => {
+                const date = new Date(c.scheduledAt).toLocaleDateString('ko-KR', {
+                  month: 'short', day: 'numeric',
+                });
+                return (
+                  <div key={c.id} className="bg-indigo-50/80 backdrop-blur-[12px] border border-indigo-200 rounded-2xl shadow-sm p-4 flex items-center justify-between hover:shadow-md transition-shadow">
+                    <div className="flex items-center gap-4">
+                      <div className="w-8 h-8 rounded-full bg-indigo-200 flex items-center justify-center text-xs font-bold text-indigo-700">
+                        {(c.studentName ?? '?').charAt(0)}
+                      </div>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-sm font-medium text-slate-800">{c.studentName ?? '학생'}</span>
+                          <TagChip label="요청됨" color="indigo" size="sm" />
+                        </div>
+                        {c.courseTitle && (
+                          <p className="text-xs text-slate-500 mt-0.5">{c.courseTitle}</p>
+                        )}
+                        {c.notes && (
+                          <p className="text-xs text-slate-400 mt-0.5 max-w-md truncate">"{c.notes}"</p>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-slate-400">{date}</span>
+                      <button
+                        onClick={() => {
+                          setScheduleStudentId(c.studentId);
+                          setScheduleStudentName(c.studentName ?? '');
+                          setScheduleModalOpen(true);
+                        }}
+                        className="px-3 py-1.5 text-xs font-medium rounded-lg bg-indigo-600 text-white hover:bg-indigo-700 transition-colors"
+                      >
+                        일정 잡기
+                      </button>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
         {/* Scheduled */}
         {scheduled.length > 0 && (
           <div>

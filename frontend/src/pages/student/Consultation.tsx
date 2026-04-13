@@ -115,9 +115,19 @@ const ConsultationPage: React.FC = () => {
           <div className="rounded-2xl bg-amber-50 border border-amber-200 p-5">
             <h3 className="text-sm font-bold text-amber-800 mb-2">요청 대기 중인 상담</h3>
             {requestedConsultations.map((c) => (
-              <p key={c.id} className="text-xs text-amber-700">
-                {c.courseTitle ?? '과정'} — 교강사 확인 대기 중
-              </p>
+              <div key={c.id} className="flex items-center gap-2 py-1">
+                <span className="text-xs font-medium text-amber-800">
+                  {c.courseTitle ?? '과정'}
+                </span>
+                <span className="text-xs text-amber-600">
+                  {c.instructorName ? `${c.instructorName} 강사님` : '강사'} 에게 요청
+                </span>
+                {c.notes && (
+                  <span className="text-xs text-amber-500 truncate max-w-[200px]">
+                    — {c.notes}
+                  </span>
+                )}
+              </div>
             ))}
           </div>
         )}
