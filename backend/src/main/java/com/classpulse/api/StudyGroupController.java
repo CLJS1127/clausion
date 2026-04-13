@@ -223,22 +223,6 @@ public class StudyGroupController {
         return ResponseEntity.noContent().build();
     }
 
-    @DeleteMapping("/{id}")
-    @Transactional
-    public ResponseEntity<Void> delete(@PathVariable Long id) {
-        Long userId = SecurityUtil.getCurrentUserId();
-
-        StudyGroup group = studyGroupRepository.findById(id)
-                .orElseThrow(() -> new IllegalArgumentException("Study group not found: " + id));
-
-        if (group.getCreatedBy() == null || !group.getCreatedBy().getId().equals(userId)) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
-        }
-
-        studyGroupRepository.delete(group);
-        return ResponseEntity.noContent().build();
-    }
-
     @DeleteMapping("/{id}/members/{studentId}")
     @Transactional
     public ResponseEntity<Void> kickMember(@PathVariable Long id, @PathVariable Long studentId) {
