@@ -258,9 +258,11 @@ public class OperatorPersonnelController {
                     .findByInstructorIdOrderByScheduledAtDesc(instructor.getId()).size();
             int courseCount = courses.size();
 
-            double rawScore = studentCount * 0.4 + consultationCount * 0.3 + courseCount * 0.3;
-            // Normalize to 0-100 assuming reasonable max of ~100 raw units
-            double workloadScore = Math.min(rawScore, 100.0);
+            // Normalize each factor to 0-100 then weighted average
+            double studentLoad = Math.min(studentCount / 30.0, 1.0) * 100;
+            double consultationLoad = Math.min(consultationCount / 20.0, 1.0) * 100;
+            double courseLoad = Math.min(courseCount / 5.0, 1.0) * 100;
+            double workloadScore = Math.min(studentLoad * 0.5 + consultationLoad * 0.3 + courseLoad * 0.2, 100.0);
             boolean isOverloaded = workloadScore > 70;
 
             Map<String, Object> m = new LinkedHashMap<>();

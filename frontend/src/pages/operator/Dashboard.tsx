@@ -127,8 +127,8 @@ export default function OperatorDashboard() {
                         style={{ width: `${pct}%` }}
                       />
                     </div>
-                    <span className="text-xs text-slate-500 w-20 text-right font-medium">
-                      {inst.studentCount}/{inst.courseCount * 30}명
+                    <span className="text-xs text-slate-500 w-24 text-right font-medium">
+                      {inst.studentCount}명 · {inst.courseCount}과정
                     </span>
                     <span className={`text-xs font-bold w-10 text-right ${pct >= 90 ? 'text-rose-600' : pct >= 70 ? 'text-orange-600' : 'text-slate-500'}`}>
                       {pct.toFixed(0)}%
