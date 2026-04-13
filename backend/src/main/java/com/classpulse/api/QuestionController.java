@@ -358,7 +358,12 @@ public class QuestionController {
                 log.info("Generating {} questions for course {}, skill {}, difficulty {}",
                         count, courseId, request.skillId(), difficulty);
 
-                Map<String, Object> result = questionGenerator.generate(courseId, difficulty, count);
+                Map<String, Object> result = questionGenerator.generate(
+                        courseId,
+                        request.skillId(),
+                        difficulty,
+                        count
+                );
 
                 int generatedCount = (int) result.getOrDefault("generatedCount", 0);
                 job.complete(Map.of(

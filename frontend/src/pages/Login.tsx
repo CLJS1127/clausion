@@ -25,7 +25,7 @@ export default function Login() {
         setError(`${ROLE_LABELS[role]} 계정이 아닙니다. 선택한 역할로 다시 로그인해주세요.`);
         return;
       }
-      navigate(`/${user.role.toLowerCase()}`);
+      navigate(`/${user.role.toLowerCase()}`, { replace: true });
     } catch {
       setError('로그인에 실패했습니다. 이메일과 비밀번호를 확인해주세요.');
     } finally {

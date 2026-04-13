@@ -15,5 +15,8 @@ public interface CourseRepository extends JpaRepository<Course, Long> {
     List<Course> findByStatus(String status);
 
     @EntityGraph(attributePaths = {"weeks", "createdBy"})
+    List<Course> findByStatusAndApprovalStatus(String status, String approvalStatus);
+
+    @EntityGraph(attributePaths = {"weeks", "createdBy"})
     Optional<Course> findById(Long id);
 }

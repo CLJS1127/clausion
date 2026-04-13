@@ -44,7 +44,7 @@ public class Course {
     private List<CurriculumSkill> skills = new ArrayList<>();
 
     @Column(name = "approval_status", length = 20)
-    private String approvalStatus = "APPROVED";
+    private String approvalStatus = "PENDING";
 
     @Column(name = "approval_note")
     private String approvalNote;

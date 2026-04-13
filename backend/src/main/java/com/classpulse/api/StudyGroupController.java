@@ -20,6 +20,7 @@ import org.springframework.web.bind.annotation.*;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -193,13 +194,31 @@ public class StudyGroupController {
         StudyGroup group = studyGroupRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Study group not found: " + id));
 
-        boolean removed = group.getMembers().removeIf(m -> m.getStudent().getId().equals(userId));
-        if (!removed) {
+        StudyGroupMember leavingMember = group.getMembers().stream()
+                .filter(m -> m.getStudent().getId().equals(userId))
+                .findFirst()
+                .orElse(null);
+        if (leavingMember == null) {
             return ResponseEntity.notFound().build();
         }
 
+        boolean leaderLeaving = isLeader(leavingMember);
+        group.getMembers().remove(leavingMember);
+
+        if (shouldDeleteGroup(group)) {
+            broadcastRoomDeleted(group, student.getName() + "님이 그룹을 떠나 채팅방이 종료되었습니다.");
+            studyGroupRepository.delete(group);
+            return ResponseEntity.noContent().build();
+        }
+
+        String systemMessage = student.getName() + "님이 그룹을 떠났습니다.";
+        if (leaderLeaving || !hasLeader(group)) {
+            StudyGroupMember nextLeader = promoteNextLeader(group);
+            systemMessage = systemMessage + " 새로운 방장은 " + nextLeader.getStudent().getName() + "님입니다.";
+        }
+
         studyGroupRepository.save(group);
-        broadcastSystemMessage(group, student.getName() + "님이 그룹을 떠났습니다.");
+        broadcastSystemMessage(group, systemMessage);
 
         return ResponseEntity.noContent().build();
     }
@@ -262,5 +281,55 @@ public class StudyGroupController {
         } else {
             messagingTemplate.convertAndSend("/topic/group-chat/" + group.getId(), payload);
         }
+    }
+
+    private void broadcastRoomDeleted(StudyGroup group, String text) {
+        Map<String, Object> payload = new LinkedHashMap<>();
+        payload.put("groupId", group.getId());
+        payload.put("id", null);
+        payload.put("senderId", 0);
+        payload.put("senderName", "SYSTEM");
+        payload.put("content", text);
+        payload.put("messageType", "ROOM_DELETED");
+        payload.put("createdAt", LocalDateTime.now().toString());
+
+        if (rabbitTemplate != null) {
+            rabbitTemplate.convertAndSend(
+                    RabbitMQConfig.GROUP_CHAT_EXCHANGE,
+                    "group." + group.getId(),
+                    payload
+            );
+        } else {
+            messagingTemplate.convertAndSend("/topic/group-chat/" + group.getId(), payload);
+        }
+    }
+
+    private boolean shouldDeleteGroup(StudyGroup group) {
+        return group.getMembers().size() <= 1;
+    }
+
+    private boolean hasLeader(StudyGroup group) {
+        return group.getMembers().stream().anyMatch(this::isLeader);
+    }
+
+    private boolean isLeader(StudyGroupMember member) {
+        return "LEADER".equalsIgnoreCase(member.getRole());
+    }
+
+    private StudyGroupMember promoteNextLeader(StudyGroup group) {
+        StudyGroupMember nextLeader = group.getMembers().stream()
+                .min(Comparator
+                        .comparing(StudyGroupMember::getJoinedAt, Comparator.nullsLast(Comparator.naturalOrder()))
+                        .thenComparing(StudyGroupMember::getId, Comparator.nullsLast(Comparator.naturalOrder())))
+                .orElseThrow(() -> new IllegalStateException("Cannot promote leader without members"));
+
+        group.getMembers().forEach(member -> {
+            if (!member.getId().equals(nextLeader.getId()) && isLeader(member)) {
+                member.setRole("MEMBER");
+            }
+        });
+        nextLeader.setRole("LEADER");
+        group.setCreatedBy(nextLeader.getStudent());
+        return nextLeader;
     }
 }

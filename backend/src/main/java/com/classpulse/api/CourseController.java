@@ -27,7 +27,8 @@ public class CourseController {
 
     public record CourseResponse(
             Long id, String title, String description, String schedule, String classTime,
-            String status, Long createdById, String createdByName,
+            String status, String approvalStatus, String approvalNote,
+            Long createdById, String createdByName,
             List<WeekResponse> weeks, int enrollmentCount
     ) {
         public static CourseResponse from(Course c, int enrollmentCount) {
@@ -38,6 +39,8 @@ public class CourseController {
                     c.getId(), c.getTitle(), c.getDescription(),
                     c.getSchedule(), c.getClassTime(),
                     c.getStatus(),
+                    c.getApprovalStatus(),
+                    c.getApprovalNote(),
                     c.getCreatedBy() != null ? c.getCreatedBy().getId() : null,
                     c.getCreatedBy() != null ? c.getCreatedBy().getName() : null,
                     weeks, enrollmentCount
@@ -63,6 +66,7 @@ public class CourseController {
                 .classTime(request.classTime())
                 .createdBy(instructor)
                 .status("ACTIVE")
+                .approvalStatus("PENDING")
                 .build();
         course = courseRepository.save(course);
 
@@ -79,7 +83,7 @@ public class CourseController {
         if (currentUser.getRole() == User.Role.INSTRUCTOR) {
             courses = courseRepository.findByCreatedByIdAndStatus(userId, "ACTIVE");
         } else {
-            courses = courseRepository.findByStatus("ACTIVE");
+            courses = courseRepository.findByStatusAndApprovalStatus("ACTIVE", "APPROVED");
         }
 
         List<CourseResponse> responses = courses.stream()

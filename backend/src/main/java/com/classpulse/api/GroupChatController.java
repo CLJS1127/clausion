@@ -94,12 +94,21 @@ public class GroupChatController {
             return;
         }
 
-        // Persist to DB
+        String content = request.content() != null ? request.content().trim() : "";
         boolean isFile = request.fileKey() != null && !request.fileKey().isBlank();
+        if (!isFile && content.isBlank()) {
+            log.debug("Ignored blank group chat message - groupId={}, senderId={}", groupId, userId);
+            return;
+        }
+
+        String resolvedContent = isFile
+                ? (content.isBlank() ? Optional.ofNullable(request.fileName()).orElse("") : content)
+                : content;
+
         StudyGroupMessage message = StudyGroupMessage.builder()
                 .studyGroup(group)
                 .sender(sender)
-                .content(request.content() != null ? request.content() : "")
+                .content(resolvedContent)
                 .messageType(isFile ? "FILE" : "TEXT")
                 .fileKey(isFile ? request.fileKey() : null)
                 .fileName(isFile ? request.fileName() : null)

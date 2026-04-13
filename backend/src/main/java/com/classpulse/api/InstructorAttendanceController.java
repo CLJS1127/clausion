@@ -93,7 +93,7 @@ public class InstructorAttendanceController {
         courseSessionRepository.save(session);
 
         // 수강생 전원에게 출결 레코드 자동 생성 (기본: 결석)
-        List<CourseEnrollment> enrollments = courseEnrollmentRepository.findByCourseId(courseId);
+        List<CourseEnrollment> enrollments = courseEnrollmentRepository.findByCourseIdAndStatus(courseId, "ACTIVE");
         for (CourseEnrollment enrollment : enrollments) {
             AttendanceRecord record = AttendanceRecord.builder()
                     .sessionId(session.getId())
@@ -179,7 +179,7 @@ public class InstructorAttendanceController {
         }
 
         List<CourseSession> sessions = courseSessionRepository.findByCourseIdOrderBySessionDateDesc(courseId);
-        List<CourseEnrollment> enrollments = courseEnrollmentRepository.findByCourseId(courseId);
+        List<CourseEnrollment> enrollments = courseEnrollmentRepository.findByCourseIdAndStatus(courseId, "ACTIVE");
 
         long totalPresent = 0;
         long totalRecords = 0;

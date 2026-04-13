@@ -7,6 +7,7 @@ import {
   RemoteParticipant,
   LocalTrackPublication,
 } from 'livekit-client';
+import { api } from '../api/client';
 
 interface UseLiveKitOptions {
   consultationId: number;
@@ -66,22 +67,9 @@ export function useLiveKit({
       setError(null);
 
       try {
-        const BASE_URL = import.meta.env.VITE_API_URL ?? '';
-        const jwt = localStorage.getItem('token');
-        const headers: Record<string, string> = {
-          'Content-Type': 'application/json',
-        };
-        if (jwt) headers['Authorization'] = `Bearer ${jwt}`;
-
         let livekitToken = preToken;
         if (!livekitToken) {
-          const res = await fetch(`${BASE_URL}/api/livekit/token`, {
-            method: 'POST',
-            headers,
-            body: JSON.stringify({ consultationId, role }),
-          });
-          if (!res.ok) throw new Error('토큰 발급 실패');
-          const data = await res.json();
+          const data = await api.post<{ token: string }>('/api/livekit/token', { consultationId, role });
           livekitToken = data.token;
         }
 

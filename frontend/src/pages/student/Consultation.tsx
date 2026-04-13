@@ -48,6 +48,9 @@ const ConsultationPage: React.FC = () => {
     queryFn: () => consultationsApi.getConsultations('student'),
   });
 
+  const [rejectModal, setRejectModal] = useState<{ id: string; title?: string } | null>(null);
+  const [rejectedMessage, setRejectedMessage] = useState(false);
+
   const requestMutation = useMutation({
     mutationFn: () => consultationsApi.requestConsultation({
       courseId: Number(courseId),
@@ -60,8 +63,24 @@ const ConsultationPage: React.FC = () => {
     },
   });
 
+  const rejectMutation = useMutation({
+    mutationFn: (consultationId: string) => consultationsApi.rejectConsultation(consultationId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['consultations'] });
+      setRejectModal(null);
+      setRejectedMessage(true);
+      setTimeout(() => setRejectedMessage(false), 3000);
+    },
+  });
+
   const pastConsultations = (consultations ?? []).filter((c) => c.status === 'COMPLETED');
   const requestedConsultations = (consultations ?? []).filter((c) => c.status === 'REQUESTED');
+  const scheduledConsultations = (consultations ?? []).filter((c) => c.status === 'SCHEDULED');
+  const rejectedConsultations = (consultations ?? []).filter((c) => c.status === 'REJECTED');
+
+  void rejectModal;
+  void rejectedMessage;
+  void rejectMutation;
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -117,6 +136,46 @@ const ConsultationPage: React.FC = () => {
             {requestedConsultations.map((c) => (
               <p key={c.id} className="text-xs text-amber-700">
                 {c.courseTitle ?? '과정'} — 교강사 확인 대기 중
+              </p>
+            ))}
+          </div>
+        )}
+
+        {/* Scheduled consultations - with reject option */}
+        {scheduledConsultations.length > 0 && (
+          <div className="rounded-2xl bg-indigo-50 border border-indigo-200 p-5">
+            <h3 className="text-sm font-bold text-indigo-800 mb-3">예정된 상담</h3>
+            <div className="space-y-2">
+              {scheduledConsultations.map((c) => (
+                <div key={c.id} className="flex items-center justify-between bg-white rounded-xl p-3 border border-indigo-100">
+                  <div>
+                    <p className="text-sm font-medium text-slate-800">{c.courseTitle ?? '과정'}</p>
+                    <p className="text-xs text-slate-500">
+                      {new Date(c.scheduledAt).toLocaleDateString('ko-KR', {
+                        month: 'short', day: 'numeric', weekday: 'short',
+                        hour: '2-digit', minute: '2-digit',
+                      })}
+                    </p>
+                  </div>
+                  <button
+                    onClick={() => setRejectModal({ id: c.id, title: c.courseTitle })}
+                    className="px-3 py-1.5 text-xs font-medium rounded-lg border border-rose-200 text-rose-600 hover:bg-rose-50 transition-colors"
+                  >
+                    거절
+                  </button>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* Rejected consultations */}
+        {rejectedConsultations.length > 0 && (
+          <div className="rounded-2xl bg-rose-50 border border-rose-200 p-5">
+            <h3 className="text-sm font-bold text-rose-800 mb-2">거절된 상담</h3>
+            {rejectedConsultations.map((c) => (
+              <p key={c.id} className="text-xs text-rose-700">
+                {c.courseTitle ?? '과정'} — 거절됨
               </p>
             ))}
           </div>
@@ -241,6 +300,49 @@ const ConsultationPage: React.FC = () => {
           </div>
         </div>
       </main>
+
+      {/* Reject confirmation modal */}
+      {rejectModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center">
+          <div className="absolute inset-0 bg-black/30 backdrop-blur-sm" onClick={() => setRejectModal(null)} />
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="relative bg-white rounded-2xl shadow-xl p-6 w-full max-w-sm mx-4"
+          >
+            <h3 className="text-sm font-bold text-slate-800 mb-2">상담 거절</h3>
+            <p className="text-sm text-slate-600 mb-5">
+              <span className="font-semibold text-slate-800">{rejectModal.title ?? '해당'}</span>
+              {' 과목 상담을 거절하시겠습니까?'}
+            </p>
+            <div className="flex gap-2 justify-end">
+              <button
+                onClick={() => setRejectModal(null)}
+                className="px-4 py-2 text-sm rounded-lg border border-slate-300 text-slate-600 hover:bg-slate-50 transition-colors"
+              >
+                취소
+              </button>
+              <button
+                onClick={() => rejectMutation.mutate(rejectModal.id)}
+                disabled={rejectMutation.isPending}
+                className="px-4 py-2 text-sm font-medium rounded-lg bg-rose-500 text-white hover:bg-rose-600 transition-colors disabled:opacity-50"
+              >
+                {rejectMutation.isPending ? '처리 중...' : '거절'}
+              </button>
+            </div>
+          </motion.div>
+        </div>
+      )}
+
+      {/* Rejected success toast */}
+      {rejectedMessage && (
+        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[70] flex items-center gap-3 bg-rose-600 text-white text-sm font-medium px-5 py-3 rounded-xl shadow-lg">
+          <svg className="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+          </svg>
+          거절되었습니다
+        </div>
+      )}
     </div>
   );
 };

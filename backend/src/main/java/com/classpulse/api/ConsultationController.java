@@ -13,6 +13,8 @@ import com.classpulse.domain.course.Course;
 import com.classpulse.domain.course.CourseRepository;
 import com.classpulse.domain.user.User;
 import com.classpulse.domain.user.UserRepository;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
@@ -23,6 +25,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -39,6 +42,7 @@ public class ConsultationController {
     private final NotificationService notificationService;
     private final CourseRepository courseRepository;
     private final UserRepository userRepository;
+    private final ObjectMapper objectMapper;
 
     // --- DTOs ---
 
@@ -120,7 +124,7 @@ public class ConsultationController {
     public ResponseEntity<?> requestConsultation(@RequestBody Map<String, Object> body) {
         Long studentId = SecurityUtil.getCurrentUserId();
         Long courseId = Long.valueOf(body.get("courseId").toString());
-        String message = body.containsKey("message") ? body.get("message").toString() : "";
+        String message = readFirstString(body, "reason", "message");
 
         Course course = courseRepository.findById(courseId)
                 .orElseThrow(() -> new IllegalArgumentException("과정을 찾을 수 없습니다"));
@@ -246,7 +250,21 @@ public class ConsultationController {
     }
 
     @PostMapping("/{id}/summary")
-    public ResponseEntity<JobIdResponse> triggerSummary(@PathVariable Long id) {
+    @Transactional
+    public ResponseEntity<?> triggerSummary(
+            @PathVariable Long id,
+            @RequestBody(required = false) Map<String, Object> body
+    ) {
+        if (body != null && hasManualSummaryPayload(body)) {
+            Consultation updated = consultationService.updateSummary(
+                    id,
+                    readOptionalString(body, "summaryText"),
+                    readOptionalString(body, "causeAnalysis"),
+                    parseActionPlan(body.get("actionPlanJson"))
+            );
+            return ResponseEntity.ok(ConsultationResponse.from(updated));
+        }
+
         AsyncJob job = AsyncJob.builder()
                 .jobType("CONSULTATION_SUMMARY")
                 .status("PENDING")
@@ -268,6 +286,56 @@ public class ConsultationController {
         consultation.setNotes(request.notes());
         consultation = consultationRepository.save(consultation);
         return ResponseEntity.ok(ConsultationResponse.from(consultation));
+    }
+
+    private boolean hasManualSummaryPayload(Map<String, Object> body) {
+        return body.containsKey("summaryText")
+                || body.containsKey("causeAnalysis")
+                || body.containsKey("actionPlanJson");
+    }
+
+    private String readFirstString(Map<String, Object> body, String... keys) {
+        for (String key : keys) {
+            String value = readOptionalString(body, key);
+            if (value != null && !value.isBlank()) {
+                return value;
+            }
+        }
+        return "";
+    }
+
+    private String readOptionalString(Map<String, Object> body, String key) {
+        Object value = body.get(key);
+        if (value == null) {
+            return null;
+        }
+        String text = value.toString().trim();
+        return text.isEmpty() ? null : text;
+    }
+
+    @SuppressWarnings("unchecked")
+    private List<Map<String, Object>> parseActionPlan(Object raw) {
+        if (raw == null) {
+            return Collections.emptyList();
+        }
+        if (raw instanceof List<?> list) {
+            return list.stream()
+                    .filter(Map.class::isInstance)
+                    .map(item -> (Map<String, Object>) item)
+                    .toList();
+        }
+        if (raw instanceof String text) {
+            String trimmed = text.trim();
+            if (trimmed.isEmpty()) {
+                return Collections.emptyList();
+            }
+            try {
+                return objectMapper.readValue(trimmed, new TypeReference<List<Map<String, Object>>>() {});
+            } catch (Exception e) {
+                throw new IllegalArgumentException("actionPlanJson 형식이 올바르지 않습니다", e);
+            }
+        }
+        return objectMapper.convertValue(raw, new TypeReference<List<Map<String, Object>>>() {});
     }
 
     // --- Async Service ---

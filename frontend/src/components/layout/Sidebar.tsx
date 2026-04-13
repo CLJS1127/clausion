@@ -112,6 +112,7 @@ const operatorNav: NavSection[] = [
     title: '과정 운영',
     items: [
       { id: 'courses', label: '과정 편성', icon: '📋', path: 'courses' },
+      { id: 'attendance', label: '출결 관리', icon: '📝', path: 'attendance' },
     ],
   },
   {

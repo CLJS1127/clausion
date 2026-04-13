@@ -25,7 +25,7 @@ interface ToastInfo {
 
 export default function AppShell({ role }: AppShellProps) {
   const navigate = useNavigate();
-  const { notifications } = useNotifications();
+  const { notifications, markAsRead } = useNotifications();
   const [incomingCall, setIncomingCall] = useState<CallInfo | null>(null);
   const [toasts, setToasts] = useState<ToastInfo[]>([]);
   const handledNotifKey = useRef<string | null>(null);
@@ -63,13 +63,11 @@ export default function AppShell({ role }: AppShellProps) {
     }
   }, [notifications, role]);
 
-  // Listen for CONSULTATION_SCHEDULED notifications (student side) → show toast
+  // Show toast notifications for newly arrived actionable events across roles.
   useEffect(() => {
-    if (role !== 'student') return;
-
     const latest = notifications[0];
-    const consultationNotifTypes = ['CONSULTATION_SCHEDULED', 'CONSULTATION_ACCEPTED', 'CONSULTATION_REJECTED'];
-    if (!latest || latest.isRead || !consultationNotifTypes.includes(latest.type)) return;
+    if (!latest || latest.isRead) return;
+    if (latest.type === 'INCOMING_CALL' || latest.type === 'UNREAD_COUNT') return;
 
     const key = latest.id ?? `${latest.createdAt ?? ''}_${latest.type}`;
     if (handledToastKeys.current.has(key)) return;
@@ -86,11 +84,14 @@ export default function AppShell({ role }: AppShellProps) {
     setTimeout(() => {
       setToasts((prev) => prev.filter((t) => t.id !== key));
     }, 6000);
-  }, [notifications, role]);
+  }, [notifications]);
 
   const dismissToast = useCallback((id: string) => {
     setToasts((prev) => prev.filter((t) => t.id !== id));
-  }, []);
+    if (/^\d+$/.test(id)) {
+      markAsRead(id);
+    }
+  }, [markAsRead]);
 
   const handleAccept = useCallback(() => {
     if (!incomingCall) return;
@@ -124,41 +125,41 @@ export default function AppShell({ role }: AppShellProps) {
           />
           <StudentChatbot />
 
-          {/* Consultation scheduled toast notifications */}
-          <AnimatePresence>
-            {toasts.map((toast, i) => (
-              <motion.div
-                key={toast.id}
-                initial={{ opacity: 0, y: -30, x: 20 }}
-                animate={{ opacity: 1, y: 0, x: 0 }}
-                exit={{ opacity: 0, y: -20 }}
-                className="fixed z-[100] right-6"
-                style={{ top: `${24 + i * 88}px` }}
-              >
-                <div className="flex items-start gap-3 bg-white border border-indigo-200 shadow-lg rounded-xl px-4 py-3 w-80">
-                  <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center flex-shrink-0 mt-0.5">
-                    <svg className="w-4 h-4 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                    </svg>
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <p className="text-sm font-semibold text-slate-800">{toast.title}</p>
-                    <p className="text-xs text-slate-500 mt-0.5">{toast.message}</p>
-                  </div>
-                  <button
-                    onClick={() => dismissToast(toast.id)}
-                    className="text-slate-400 hover:text-slate-600 flex-shrink-0"
-                  >
-                    <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                      <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                  </button>
-                </div>
-              </motion.div>
-            ))}
-          </AnimatePresence>
         </>
       )}
+
+      <AnimatePresence>
+        {toasts.map((toast, i) => (
+          <motion.div
+            key={toast.id}
+            initial={{ opacity: 0, y: -30, x: 20 }}
+            animate={{ opacity: 1, y: 0, x: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            className="fixed z-[100] right-6"
+            style={{ top: `${24 + i * 88}px` }}
+          >
+            <div className="flex items-start gap-3 bg-white border border-indigo-200 shadow-lg rounded-xl px-4 py-3 w-80">
+              <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center flex-shrink-0 mt-0.5">
+                <svg className="w-4 h-4 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold text-slate-800">{toast.title}</p>
+                <p className="text-xs text-slate-500 mt-0.5">{toast.message}</p>
+              </div>
+              <button
+                onClick={() => dismissToast(toast.id)}
+                className="text-slate-400 hover:text-slate-600 flex-shrink-0"
+              >
+                <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+          </motion.div>
+        ))}
+      </AnimatePresence>
     </div>
   );
 }

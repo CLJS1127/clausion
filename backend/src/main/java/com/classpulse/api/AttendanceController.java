@@ -62,8 +62,8 @@ public class AttendanceController {
                 .build();
         courseSessionRepository.save(session);
 
-        // Auto-create attendance records for all enrolled students
-        List<CourseEnrollment> enrollments = courseEnrollmentRepository.findByCourseId(courseId);
+        // Auto-create attendance records for approved/active students only.
+        List<CourseEnrollment> enrollments = courseEnrollmentRepository.findByCourseIdAndStatus(courseId, "ACTIVE");
         for (CourseEnrollment enrollment : enrollments) {
             AttendanceRecord record = AttendanceRecord.builder()
                     .sessionId(session.getId())
@@ -167,7 +167,7 @@ public class AttendanceController {
     @GetMapping("/stats/{courseId}")
     public ResponseEntity<Map<String, Object>> getAttendanceStats(@PathVariable Long courseId) {
         List<CourseSession> sessions = courseSessionRepository.findByCourseIdOrderBySessionDateDesc(courseId);
-        List<CourseEnrollment> enrollments = courseEnrollmentRepository.findByCourseId(courseId);
+        List<CourseEnrollment> enrollments = courseEnrollmentRepository.findByCourseIdAndStatus(courseId, "ACTIVE");
 
         long totalPresent = 0;
         long totalRecords = 0;

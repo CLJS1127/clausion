@@ -28,7 +28,7 @@ export default function OperatorLogin() {
         useAuthStore.getState().logout();
         return;
       }
-      navigate('/operator');
+      navigate('/operator', { replace: true });
     } catch {
       setError('로그인에 실패했습니다. 이메일과 비밀번호를 확인해주세요.');
     } finally {
@@ -43,7 +43,7 @@ export default function OperatorLogin() {
 
     try {
       await register(email, password, name, 'OPERATOR', inviteCode);
-      navigate('/operator');
+      navigate('/operator', { replace: true });
     } catch {
       setError('가입에 실패했습니다. 초대 코드가 유효한지 확인해주세요.');
     } finally {

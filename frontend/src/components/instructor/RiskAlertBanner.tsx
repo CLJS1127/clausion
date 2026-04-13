@@ -8,19 +8,6 @@ import { useAuthStore } from '../../store/authStore';
 import { useCourseId } from '../../hooks/useCourseId';
 import TagChip from '../common/TagChip';
 
-interface RiskStudent {
-  id: string;
-  name: string;
-  reasons: string[];
-}
-
-const MOCK_RISK_STUDENTS: RiskStudent[] = [
-  { id: '5', name: '정예린', reasons: ['이해도 급락', '3주 연속 하락'] },
-  { id: '10', name: '오민서', reasons: ['과제 미제출', '망각 위험'] },
-  { id: '16', name: '황시우', reasons: ['출석률 저하', '동기 저하'] },
-  { id: '24', name: '백승현', reasons: ['자신감 하락', '수행력 부족'] },
-];
-
 export default function RiskAlertBanner() {
   const courseId = useCourseId();
   const navigate = useNavigate();

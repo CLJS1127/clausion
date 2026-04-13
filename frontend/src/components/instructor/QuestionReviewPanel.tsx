@@ -2,10 +2,7 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { questionsApi } from '../../api/questions';
 import { useCourseId } from '../../hooks/useCourseId';
-import type { Question } from '../../types';
 import TagChip from '../common/TagChip';
-
-const MOCK_QUESTIONS: Question[] = [];
 
 const SKILL_NAMES: Record<string, string> = {
   s1: 'React Hooks',

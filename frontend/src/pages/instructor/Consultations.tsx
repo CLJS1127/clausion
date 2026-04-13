@@ -15,41 +15,6 @@ import PostSummaryPanel from '../../components/consultation/PostSummaryPanel';
 import TagChip from '../../components/common/TagChip';
 import Modal from '../../components/common/Modal';
 
-const MOCK_CONSULTATIONS: (Consultation & { studentName: string })[] = [
-  {
-    id: 'con1', studentId: '5', instructorId: 'i1', courseId: 'c1',
-    scheduledAt: '2026-04-08T10:00:00Z', status: 'SCHEDULED',
-    summaryText: '', actionPlanJson: '', createdAt: '2026-04-07T08:00:00Z',
-    studentName: '정예린',
-  },
-  {
-    id: 'con2', studentId: '9', instructorId: 'i1', courseId: 'c1',
-    scheduledAt: '2026-04-08T11:30:00Z', status: 'SCHEDULED',
-    summaryText: '', actionPlanJson: '', createdAt: '2026-04-07T08:00:00Z',
-    studentName: '오민서',
-  },
-  {
-    id: 'con3', studentId: '11', instructorId: 'i1', courseId: 'c1',
-    scheduledAt: '2026-04-08T14:00:00Z', status: 'SCHEDULED',
-    summaryText: '', actionPlanJson: '', createdAt: '2026-04-07T09:00:00Z',
-    studentName: '황시우',
-  },
-  {
-    id: 'con4', studentId: '3', instructorId: 'i1', courseId: 'c1',
-    scheduledAt: '2026-04-07T10:00:00Z', status: 'COMPLETED',
-    summaryText: 'React 상태 관리 전반적 이해 부족. 기초부터 재학습 필요.',
-    actionPlanJson: '[]', createdAt: '2026-04-06T08:00:00Z',
-    studentName: '박지호',
-  },
-  {
-    id: 'con5', studentId: '8', instructorId: 'i1', courseId: 'c1',
-    scheduledAt: '2026-04-06T14:00:00Z', status: 'COMPLETED',
-    summaryText: '비동기 처리 개념 보강 필요. 자신감 회복에 초점.',
-    actionPlanJson: '[]', createdAt: '2026-04-05T08:00:00Z',
-    studentName: '장하은',
-  },
-];
-
 type View = 'list' | 'active';
 
 const statusLabel: Record<string, { text: string; color: 'emerald' | 'amber' | 'slate' | 'rose' }> = {

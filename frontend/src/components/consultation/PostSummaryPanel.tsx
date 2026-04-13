@@ -18,6 +18,11 @@ const MOCK_ACTION_PLAN: ActionItem[] = [
 ];
 
 const SUMMARY_TEXT = '학생은 React 상태 관리와 TypeScript 타입 시스템에서 근본적인 이해 부족을 보이고 있습니다. 특히 useEffect의 라이프사이클과 의존성 배열 관리에 어려움을 겪고 있으며, 실습 과제 수행 시 자신감이 크게 저하되는 패턴이 관찰됩니다.';
+const CAUSE_ANALYSIS = [
+  'JavaScript 기초 개념(클로저, 비동기) 선행 학습 부족',
+  '이론 학습 후 실습 연결이 부족한 학습 패턴',
+  '에러 발생 시 디버깅 전략 부재로 인한 좌절감',
+].join('\n');
 
 export default function PostSummaryPanel({ consultationId }: { consultationId?: string }) {
   const [actionItems, setActionItems] = useState(MOCK_ACTION_PLAN);
@@ -34,8 +39,9 @@ export default function PostSummaryPanel({ consultationId }: { consultationId?: 
   const saveMutation = useMutation({
     mutationFn: () => {
       if (!consultationId) throw new Error('No consultation ID');
-      return consultationsApi.createSummary(consultationId, {
+      return consultationsApi.saveSummary(consultationId, {
         summaryText: SUMMARY_TEXT,
+        causeAnalysis: CAUSE_ANALYSIS,
         actionPlanJson: JSON.stringify(actionItems),
       });
     },

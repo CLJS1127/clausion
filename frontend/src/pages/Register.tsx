@@ -31,7 +31,7 @@ export default function Register() {
     setLoading(true);
     try {
       await register(email, password, name, role);
-      navigate(`/${role.toLowerCase()}`);
+      navigate(`/${role.toLowerCase()}`, { replace: true });
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       setError('회원가입 실패: ' + msg);

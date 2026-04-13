@@ -127,10 +127,23 @@ public class QuestionGenerator {
 
     @Transactional
     public Map<String, Object> generate(Long courseId, String difficulty, int count) {
+        return generate(courseId, null, difficulty, count);
+    }
+
+    @Transactional
+    public Map<String, Object> generate(Long courseId, Long skillId, String difficulty, int count) {
         Course course = courseRepository.findById(courseId)
                 .orElseThrow(() -> new IllegalArgumentException("Course not found: " + courseId));
 
         List<CurriculumSkill> skills = curriculumSkillRepository.findByCourseId(courseId);
+        if (skillId != null) {
+            skills = skills.stream()
+                    .filter(skill -> skill.getId().equals(skillId))
+                    .toList();
+            if (skills.isEmpty()) {
+                throw new IllegalArgumentException("해당 스킬을 찾을 수 없습니다: " + skillId);
+            }
+        }
         if (skills.isEmpty()) {
             throw new IllegalStateException("해당 과목에 등록된 스킬이 없습니다. 커리큘럼 분석을 먼저 실행하세요.");
         }

@@ -42,7 +42,7 @@ public class StudentAttendanceController {
         LocalDate today = LocalDate.now();
 
         // 수강 중인 과정 ID 목록
-        List<CourseEnrollment> enrollments = courseEnrollmentRepository.findByStudentIdAndStatus(studentId, "APPROVED");
+        List<CourseEnrollment> enrollments = courseEnrollmentRepository.findByStudentIdAndStatus(studentId, "ACTIVE");
         if (enrollments.isEmpty()) {
             return ResponseEntity.ok(Collections.emptyList());
         }
@@ -126,7 +126,7 @@ public class StudentAttendanceController {
     @GetMapping("/my")
     public ResponseEntity<List<Map<String, Object>>> getMyAttendance() {
         Long studentId = SecurityUtil.getCurrentUserId();
-        List<CourseEnrollment> enrollments = courseEnrollmentRepository.findByStudentIdAndStatus(studentId, "APPROVED");
+        List<CourseEnrollment> enrollments = courseEnrollmentRepository.findByStudentIdAndStatus(studentId, "ACTIVE");
 
         List<Map<String, Object>> result = new ArrayList<>();
         for (CourseEnrollment enrollment : enrollments) {

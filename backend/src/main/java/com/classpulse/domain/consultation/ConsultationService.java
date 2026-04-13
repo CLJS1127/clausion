@@ -55,9 +55,15 @@ public class ConsultationService {
     @Transactional
     public Consultation updateSummary(Long id, String summaryText, String causeAnalysis, List<java.util.Map<String, Object>> actionPlan) {
         Consultation c = getById(id);
-        c.setSummaryText(summaryText);
-        c.setCauseAnalysis(causeAnalysis);
-        c.setActionPlanJson(actionPlan);
+        if (summaryText != null) {
+            c.setSummaryText(summaryText);
+        }
+        if (causeAnalysis != null) {
+            c.setCauseAnalysis(causeAnalysis);
+        }
+        if (actionPlan != null) {
+            c.setActionPlanJson(actionPlan);
+        }
         c.setStatus("COMPLETED");
         c.setCompletedAt(LocalDateTime.now());
         return consultationRepository.save(c);

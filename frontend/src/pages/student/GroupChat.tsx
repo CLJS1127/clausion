@@ -1,16 +1,19 @@
-import { useState, useEffect, useRef, useCallback } from 'react';
+import { startTransition, useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Client } from '@stomp/stompjs';
 import { motion, AnimatePresence } from 'framer-motion';
+import { ApiError } from '../../api/client';
 import { groupChatApi } from '../../api/groupChat';
 import { studyGroupApi } from '../../api/studyGroup';
+import { toApiUrl } from '../../lib/apiBase';
 import { useAuthStore } from '../../store/authStore';
 import type { GroupChatMessage, StudyGroup } from '../../types';
 
 export default function GroupChat() {
   const { groupId } = useParams<{ groupId: string }>();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const { user, token } = useAuthStore();
   const userId = user?.id ? Number(user.id) : 0;
 
@@ -22,22 +25,44 @@ export default function GroupChat() {
   const bottomRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const roomClosedRef = useRef(false);
+
+  const exitClosedRoom = useCallback((message: string) => {
+    if (roomClosedRef.current) return;
+
+    roomClosedRef.current = true;
+    setConnected(false);
+    void queryClient.invalidateQueries({ queryKey: ['my-study-groups'] });
+    void queryClient.invalidateQueries({ queryKey: ['course-study-groups'] });
+    void queryClient.invalidateQueries({ queryKey: ['study-group', groupId] });
+    void queryClient.invalidateQueries({ queryKey: ['group-chat-history', groupId] });
+    if (clientRef.current) {
+      void clientRef.current.deactivate();
+      clientRef.current = null;
+    }
+    window.alert(message);
+    startTransition(() => {
+      navigate('/student/study-groups', { replace: true });
+    });
+  }, [groupId, navigate, queryClient]);
 
   // Fetch group info
-  const { data: group } = useQuery<StudyGroup>({
+  const { data: group, error: groupError } = useQuery<StudyGroup>({
     queryKey: ['study-group', groupId],
     queryFn: () => studyGroupApi.getStudyGroup(groupId!),
     enabled: !!groupId,
+    retry: false,
   });
 
   // Fetch chat history
-  const { data: history } = useQuery<GroupChatMessage[]>({
+  const { data: history, error: historyError } = useQuery<GroupChatMessage[]>({
     queryKey: ['group-chat-history', groupId],
     queryFn: () => groupChatApi.getMessages(groupId!),
     enabled: !!groupId,
     refetchOnWindowFocus: true,
     refetchInterval: false,
     staleTime: 0,
+    retry: false,
   });
 
   // Load history into messages when entering or switching rooms
@@ -46,6 +71,26 @@ export default function GroupChat() {
       setMessages(history);
     }
   }, [history, groupId]);
+
+  useEffect(() => {
+    const error = groupError ?? historyError;
+    if (!(error instanceof ApiError)) return;
+
+    const normalized = error.message.toLowerCase();
+    const roomMissing =
+      error.status === 404 ||
+      error.status === 403 ||
+      (error.status === 400 && normalized.includes('group not found')) ||
+      (error.status === 400 && normalized.includes('study group not found'));
+
+    if (!roomMissing) return;
+
+    exitClosedRoom(
+      error.status === 403
+        ? '더 이상 참여 중인 채팅방이 아닙니다.'
+        : '채팅방이 삭제되었거나 더 이상 사용할 수 없습니다.',
+    );
+  }, [exitClosedRoom, groupError, historyError]);
 
   // Auto-scroll to bottom
   useEffect(() => {
@@ -68,6 +113,10 @@ export default function GroupChat() {
         setConnected(true);
         client.subscribe(`/topic/group-chat/${groupId}`, (frame) => {
           const msg: GroupChatMessage = JSON.parse(frame.body);
+          if (msg.messageType === 'ROOM_DELETED') {
+            exitClosedRoom(msg.content || '채팅방이 종료되었습니다.');
+            return;
+          }
           setMessages((prev) => {
             // Deduplicate by id
             if (msg.id && prev.some((m) => m.id === msg.id)) return prev;
@@ -86,10 +135,10 @@ export default function GroupChat() {
     clientRef.current = client;
 
     return () => {
-      client.deactivate();
+      void client.deactivate();
       clientRef.current = null;
     };
-  }, [groupId, token]);
+  }, [exitClosedRoom, groupId, token]);
 
   const sendMessage = useCallback(() => {
     const text = input.trim();
@@ -117,8 +166,7 @@ export default function GroupChat() {
       const formData = new FormData();
       formData.append('file', file);
 
-      const baseUrl = import.meta.env.VITE_API_URL ?? '';
-      const res = await fetch(`${baseUrl}/api/files/upload`, {
+      const res = await fetch(toApiUrl('/api/files/upload'), {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}` },
         body: formData,
@@ -176,8 +224,7 @@ export default function GroupChat() {
 
   const handleFileDownload = async (fileKey: string, _fileName: string) => {
     try {
-      const baseUrl = import.meta.env.VITE_API_URL ?? '';
-      const res = await fetch(`${baseUrl}/api/files/download-url?fileKey=${encodeURIComponent(fileKey)}`, {
+      const res = await fetch(`${toApiUrl('/api/files/download-url')}?fileKey=${encodeURIComponent(fileKey)}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (!res.ok) throw new Error();

@@ -1,4 +1,5 @@
 import { api } from './client';
+import { toApiUrl } from '../lib/apiBase';
 import type { Course, CurriculumSkill } from '../types';
 
 export const coursesApi = {
@@ -25,7 +26,7 @@ export const coursesApi = {
     if (opts?.additionalPrompt) formData.append('additionalPrompt', opts.additionalPrompt);
 
     const token = localStorage.getItem('token');
-    return fetch(`/api/courses/${courseId}/curriculum`, {
+    return fetch(toApiUrl(`/api/courses/${courseId}/curriculum`), {
       method: 'POST',
       headers: token ? { Authorization: `Bearer ${token}` } : {},
       body: formData,

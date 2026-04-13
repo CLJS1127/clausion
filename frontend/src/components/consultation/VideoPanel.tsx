@@ -1,11 +1,12 @@
 import { useEffect } from 'react';
 import VideoControls from './VideoControls';
 import { useLiveKit } from '../../hooks/useLiveKit';
+import { consultationsApi } from '../../api/consultations';
 
 interface VideoPanelProps {
   consultationId?: number;
   role?: 'student' | 'instructor';
-  onEndCall?: () => void;
+  onEndCall?: () => void | Promise<void>;
 }
 
 export default function VideoPanel({
@@ -33,9 +34,16 @@ export default function VideoPanel({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  const handleEndCall = () => {
+  const handleEndCall = async () => {
     disconnect();
-    onEndCall?.();
+    if (consultationId) {
+      try {
+        await consultationsApi.endVideo(String(consultationId));
+      } catch {
+        // Navigation still proceeds even if lifecycle sync fails.
+      }
+    }
+    await onEndCall?.();
   };
 
   return (

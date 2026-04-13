@@ -1,7 +1,8 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { useEffect, type ReactNode } from 'react';
+import { BrowserRouter, Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
+import { QueryClientProvider, useQueryClient } from '@tanstack/react-query';
 import { useAuthStore } from './store/authStore';
-import type { ReactNode } from 'react';
+import { queryClient } from './lib/queryClient';
 
 import AppShell from './components/layout/AppShell';
 import Landing from './pages/Landing';
@@ -49,21 +50,78 @@ import Enrollments from './pages/instructor/Enrollments';
 import CourseCreate from './pages/instructor/CourseCreate';
 import InstructorVideoCall from './pages/instructor/VideoCall';
 import InstructorAttendance from './pages/instructor/AttendanceManagement';
+import OperatorAttendanceManagement from './pages/operator/AttendanceManagement';
 import InstructorAnnouncements from './pages/instructor/Announcements';
 
-const queryClient = new QueryClient({
-  defaultOptions: {
-    queries: {
-      staleTime: 1000 * 60 * 2,
-      retry: 1,
-    },
-  },
-});
+function isPublicPath(pathname: string) {
+  return pathname === '/'
+    || pathname === '/login'
+    || pathname === '/register'
+    || pathname === '/operator/login';
+}
+
+function AuthSessionSync() {
+  const navigate = useNavigate();
+  const location = useLocation();
+  const queryClientInstance = useQueryClient();
+  const token = useAuthStore((state) => state.token);
+  const user = useAuthStore((state) => state.user);
+  const syncFromStorage = useAuthStore((state) => state.syncFromStorage);
+
+  useEffect(() => {
+    syncFromStorage();
+  }, [syncFromStorage]);
+
+  useEffect(() => {
+    const reconcileAuth = () => {
+      syncFromStorage();
+      const { token: latestToken, user: latestUser } = useAuthStore.getState();
+      if (!latestToken || !latestUser) {
+        queryClientInstance.clear();
+        if (!isPublicPath(window.location.pathname)) {
+          navigate('/login', { replace: true });
+        }
+      }
+    };
+
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        reconcileAuth();
+      }
+    };
+
+    window.addEventListener('pageshow', reconcileAuth);
+    window.addEventListener('focus', reconcileAuth);
+    window.addEventListener('popstate', reconcileAuth);
+    window.addEventListener('storage', reconcileAuth);
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+
+    return () => {
+      window.removeEventListener('pageshow', reconcileAuth);
+      window.removeEventListener('focus', reconcileAuth);
+      window.removeEventListener('popstate', reconcileAuth);
+      window.removeEventListener('storage', reconcileAuth);
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [navigate, queryClientInstance, syncFromStorage]);
+
+  useEffect(() => {
+    if (token && user) return;
+
+    queryClientInstance.clear();
+    if (!isPublicPath(location.pathname)) {
+      navigate('/login', { replace: true });
+    }
+  }, [location.pathname, navigate, queryClientInstance, token, user]);
+
+  return null;
+}
 
 function ProtectedRoute({ children, allowedRoles }: { children: ReactNode; allowedRoles?: string[] }) {
   const { user, token } = useAuthStore();
+  const storedToken = localStorage.getItem('token');
 
-  if (!token || !user) {
+  if (!token || !user || !storedToken) {
     return <Navigate to="/login" replace />;
   }
 
@@ -79,6 +137,7 @@ export default function App() {
   return (
     <QueryClientProvider client={queryClient}>
       <BrowserRouter>
+        <AuthSessionSync />
         <Routes>
           {/* Public routes */}
           <Route path="/" element={<Landing />} />
@@ -148,6 +207,7 @@ export default function App() {
             <Route path="courses/:courseId" element={<CourseDetail />} />
             <Route path="instructors" element={<InstructorAnalysis />} />
             <Route path="intervention" element={<InterventionCenter />} />
+            <Route path="attendance" element={<OperatorAttendanceManagement />} />
             <Route path="announcements" element={<AnnouncementList />} />
             <Route path="reports" element={<OperationReports />} />
             <Route path="simulation" element={<WhatIfSimulation />} />

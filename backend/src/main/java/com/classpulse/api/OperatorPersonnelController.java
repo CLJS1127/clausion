@@ -147,6 +147,7 @@ public class OperatorPersonnelController {
                 .twinScoreBefore(twinBefore)
                 .build();
         interventionLogRepository.save(intervention);
+        notifyInstructorForIntervention(studentId, courseId, intervention.getDescription(), operatorId, intervention.getId());
 
         try {
             OperatorAuditLog auditLog = OperatorAuditLog.builder()
@@ -420,5 +421,36 @@ public class OperatorPersonnelController {
 
     private double round2(double value) {
         return BigDecimal.valueOf(value).setScale(2, RoundingMode.HALF_UP).doubleValue();
+    }
+
+    private void notifyInstructorForIntervention(Long studentId, Long courseId, String description, Long operatorId, Long interventionId) {
+        if (courseId == null) {
+            return;
+        }
+
+        Course course = courseRepository.findById(courseId).orElse(null);
+        if (course == null || course.getCreatedBy() == null) {
+            return;
+        }
+
+        User student = userRepository.findById(studentId).orElse(null);
+        String studentName = student != null ? student.getName() : "학생";
+        String message = description == null || description.isBlank()
+                ? studentName + " 학생에 대한 운영자 개입이 승인되었습니다."
+                : description;
+
+        notificationService.createNotification(
+                course.getCreatedBy().getId(),
+                "INTERVENTION_DIRECTIVE",
+                "운영자 개입 승인",
+                message,
+                Map.of(
+                        "interventionId", interventionId,
+                        "studentId", studentId,
+                        "studentName", studentName,
+                        "courseId", courseId,
+                        "operatorId", operatorId
+                )
+        );
     }
 }

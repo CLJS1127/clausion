@@ -18,6 +18,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.client.RestTemplate;
 
+import java.time.LocalDateTime;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -257,6 +258,7 @@ public class ConsultationCopilot {
         }
 
         consultation.setStatus("COMPLETED");
+        consultation.setCompletedAt(LocalDateTime.now());
         consultationRepository.save(consultation);
 
         log.info("상담 요약 생성 완료 - consultationId={}", consultationId);

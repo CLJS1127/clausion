@@ -5,6 +5,7 @@ import com.classpulse.domain.announcement.*;
 import com.classpulse.domain.audit.OperatorAuditLog;
 import com.classpulse.domain.audit.AuditLogRepository;
 import com.classpulse.domain.user.UserRepository;
+import com.classpulse.notification.NotificationService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.ResponseEntity;
@@ -25,6 +26,8 @@ public class AnnouncementController {
     private final AnnouncementReadRepository announcementReadRepository;
     private final AuditLogRepository auditLogRepository;
     private final UserRepository userRepository;
+    private final AnnouncementAudienceService announcementAudienceService;
+    private final NotificationService notificationService;
 
     @GetMapping
     public ResponseEntity<List<Map<String, Object>>> getAnnouncements() {
@@ -57,6 +60,7 @@ public class AnnouncementController {
                 .authorId(authorId)
                 .build();
         announcementRepository.save(a);
+        notifyRecipients(a);
 
         try {
             OperatorAuditLog log = OperatorAuditLog.builder()
@@ -112,13 +116,48 @@ public class AnnouncementController {
 
     @GetMapping("/{id}/stats")
     public ResponseEntity<Map<String, Object>> getAnnouncementStats(@PathVariable Long id) {
+        Announcement announcement = announcementRepository.findById(id)
+                .orElseThrow(() -> new IllegalArgumentException("공지사항을 찾을 수 없습니다: " + id));
         long readCount = announcementReadRepository.countByAnnouncementId(id);
-        long totalUsers = userRepository.count();
+        long totalUsers = announcementAudienceService.countRecipients(announcement);
 
         Map<String, Object> result = new LinkedHashMap<>();
         result.put("totalRecipients", totalUsers);
         result.put("readCount", readCount);
         result.put("readRate", totalUsers > 0 ? (double) readCount / totalUsers : 0.0);
         return ResponseEntity.ok(result);
+    }
+
+    private void notifyRecipients(Announcement announcement) {
+        String notificationTitle = announcement.getIsUrgent()
+                ? "긴급 공지: " + announcement.getTitle()
+                : "새 공지: " + announcement.getTitle();
+        String notificationMessage = summarizeContent(announcement.getContent());
+        Map<String, Object> data = new LinkedHashMap<>();
+        data.put("announcementId", announcement.getId());
+        data.put("targetType", announcement.getTargetType());
+        data.put("targetCourseId", announcement.getTargetCourseId());
+        data.put("isUrgent", announcement.getIsUrgent());
+
+        for (Long recipientId : announcementAudienceService.resolveRecipientIds(announcement)) {
+            notificationService.createNotification(
+                    recipientId,
+                    "ANNOUNCEMENT",
+                    notificationTitle,
+                    notificationMessage,
+                    data
+            );
+        }
+    }
+
+    private String summarizeContent(String content) {
+        if (content == null) {
+            return "";
+        }
+        String normalized = content.trim().replaceAll("\\s+", " ");
+        if (normalized.length() <= 120) {
+            return normalized;
+        }
+        return normalized.substring(0, 117) + "...";
     }
 }

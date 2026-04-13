@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '../../api/client';
 import GlassCard from '../../components/common/GlassCard';
 
@@ -10,15 +10,33 @@ interface Announcement {
   targetType: string;
   isUrgent: boolean;
   createdAt: string;
+  isRead?: boolean;
 }
 
 export default function InstructorAnnouncements() {
+  const queryClient = useQueryClient();
   const [expandedId, setExpandedId] = useState<string | null>(null);
 
   const { data: announcements, isLoading } = useQuery({
     queryKey: ['instructor', 'announcements'],
     queryFn: () => api.get<Announcement[]>('/api/announcements'),
   });
+
+  const readMutation = useMutation({
+    mutationFn: (announcementId: string) => api.post<void>(`/api/announcements/${announcementId}/read`),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['instructor', 'announcements'] });
+    },
+  });
+
+  const toggleAnnouncement = (announcement: Announcement) => {
+    const willExpand = expandedId !== announcement.id;
+    setExpandedId(willExpand ? announcement.id : null);
+
+    if (willExpand && !announcement.isRead) {
+      readMutation.mutate(announcement.id);
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -34,7 +52,7 @@ export default function InstructorAnnouncements() {
           {announcements?.map((a) => (
             <GlassCard key={a.id} className="overflow-hidden">
               <button
-                onClick={() => setExpandedId(expandedId === a.id ? null : a.id)}
+                onClick={() => toggleAnnouncement(a)}
                 className="w-full p-5 text-left hover:bg-slate-50/50 transition-colors"
               >
                 <div className="flex items-center justify-between">
@@ -44,7 +62,7 @@ export default function InstructorAnnouncements() {
                         긴급
                       </span>
                     )}
-                    <h3 className="text-sm font-bold text-slate-900 truncate">{a.title}</h3>
+                    <h3 className={`truncate ${a.isRead ? 'text-sm font-semibold text-slate-700' : 'text-sm font-bold text-slate-900'}`}>{a.title}</h3>
                   </div>
                   <div className="flex items-center gap-3 shrink-0 ml-3">
                     <span className="text-xs text-slate-400">{a.createdAt?.slice(0, 10)}</span>

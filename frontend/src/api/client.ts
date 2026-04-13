@@ -1,4 +1,16 @@
-const BASE_URL = import.meta.env.VITE_API_URL ?? '';
+import { toApiUrl } from '../lib/apiBase';
+
+export class ApiError extends Error {
+  status: number;
+  body: unknown;
+
+  constructor(status: number, message: string, body?: unknown) {
+    super(message);
+    this.name = 'ApiError';
+    this.status = status;
+    this.body = body;
+  }
+}
 
 function getToken(): string | null {
   return localStorage.getItem('token');
@@ -19,7 +31,7 @@ async function request<T>(
     headers['Authorization'] = `Bearer ${token}`;
   }
 
-  const res = await fetch(`${BASE_URL}${path}`, {
+  const res = await fetch(toApiUrl(path), {
     method,
     headers,
     body: body !== undefined ? JSON.stringify(body) : undefined,
@@ -38,7 +50,7 @@ async function request<T>(
     const errorBody = await res.json().catch(() => null);
     const message =
       errorBody?.message ?? errorBody?.error ?? `Request failed: ${res.status}`;
-    throw new Error(message);
+    throw new ApiError(res.status, message, errorBody);
   }
 
   // 204 No Content

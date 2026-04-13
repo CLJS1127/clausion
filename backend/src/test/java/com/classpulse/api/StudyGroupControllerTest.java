@@ -5,11 +5,13 @@ import com.classpulse.domain.course.Course;
 import com.classpulse.domain.course.CourseRepository;
 import com.classpulse.domain.studygroup.StudyGroup;
 import com.classpulse.domain.studygroup.StudyGroupMember;
+import com.classpulse.domain.studygroup.StudyGroupMessage;
 import com.classpulse.domain.studygroup.StudyGroupMessageRepository;
 import com.classpulse.domain.studygroup.StudyGroupRepository;
 import com.classpulse.domain.user.User;
 import com.classpulse.domain.user.UserService;
 import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
@@ -30,6 +32,7 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.lenient;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -61,6 +64,18 @@ class StudyGroupControllerTest {
     @AfterEach
     void clearSecurityContext() {
         SecurityContextHolder.clearContext();
+    }
+
+    @BeforeEach
+    void stubMessageRepository() {
+        lenient().when(messageRepository.save(any(StudyGroupMessage.class))).thenAnswer(invocation -> {
+            StudyGroupMessage message = invocation.getArgument(0);
+            message.setId(999L);
+            if (message.getCreatedAt() == null) {
+                message.setCreatedAt(LocalDateTime.now());
+            }
+            return message;
+        });
     }
 
     @Test

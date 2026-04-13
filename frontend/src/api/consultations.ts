@@ -36,13 +36,17 @@ export const consultationsApi = {
     return api.put<Consultation>(`/api/consultations/${consultationId}/reject`);
   },
 
-  createSummary(
+  saveSummary(
     consultationId: string,
-    data: { summaryText: string; actionPlanJson: string },
-  ): Promise<{ jobId: number }> {
-    return api.post<{ jobId: number }>(
+    data: { summaryText: string; causeAnalysis?: string; actionPlanJson: string },
+  ): Promise<Consultation> {
+    return api.post<Consultation>(
       `/api/consultations/${consultationId}/summary`,
       data,
     );
+  },
+
+  endVideo(consultationId: string): Promise<{ consultationId: number; roomName: string; status: string }> {
+    return api.post(`/api/consultations/${consultationId}/end-video`);
   },
 };
