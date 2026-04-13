@@ -38,7 +38,6 @@ import WhatIfSimulation from './pages/operator/WhatIfSimulation';
 import AuditLog from './pages/operator/AuditLog';
 import StudentManagement from './pages/operator/StudentManagement';
 import InstructorManagement from './pages/operator/InstructorManagement';
-import AtRiskStudents from './pages/operator/AtRiskStudents';
 import InviteCodeManagement from './pages/operator/InviteCodeManagement';
 
 // Instructor Pages
@@ -216,7 +215,6 @@ export default function App() {
             <Route path="reports" element={<OperationReports />} />
             <Route path="simulation" element={<WhatIfSimulation />} />
             <Route path="students" element={<StudentManagement />} />
-            <Route path="students/at-risk" element={<AtRiskStudents />} />
             <Route path="instructor-management" element={<InstructorManagement />} />
             <Route path="invite-codes" element={<InviteCodeManagement />} />
             <Route path="audit" element={<AuditLog />} />

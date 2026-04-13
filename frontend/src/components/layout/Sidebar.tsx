@@ -100,7 +100,6 @@ const operatorNav: NavSection[] = [
     title: '인원 관리',
     items: [
       { id: 'students', label: '학생 관리', icon: '🎓', path: 'students' },
-      { id: 'at-risk', label: '위험 학생', icon: '⚠️', path: 'students/at-risk' },
       { id: 'instructor-management', label: '강사 관리', icon: '👨‍🏫', path: 'instructor-management' },
     ],
   },
