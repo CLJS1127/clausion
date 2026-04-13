@@ -4,6 +4,7 @@ import { Outlet, useNavigate } from 'react-router-dom';
 import Sidebar from './Sidebar';
 import IncomingCallModal from '../consultation/IncomingCallModal';
 import { useNotifications } from '../../hooks/useNotifications';
+import { useSidebarStore } from '../../store/sidebarStore';
 import { api } from '../../api/client';
 
 interface AppShellProps {
@@ -67,11 +68,22 @@ export default function AppShell({ role }: AppShellProps) {
     setIncomingCall(null);
   }, []);
 
+  const openMobileSidebar = useSidebarStore((s) => s.openMobile);
+
   return (
     <div className="flex h-screen bg-slate-50 overflow-hidden">
       <Sidebar role={role} />
       <main className="flex-1 overflow-y-auto">
-        <div className="p-6 max-w-7xl mx-auto">
+        {/* Mobile header bar */}
+        <div className="sticky top-0 z-30 flex items-center gap-3 px-4 py-2 bg-white/80 backdrop-blur border-b border-slate-100 lg:hidden">
+          <button onClick={openMobileSidebar} className="p-1.5 rounded-lg hover:bg-slate-100">
+            <svg className="w-5 h-5 text-slate-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
+            </svg>
+          </button>
+          <span className="text-sm font-bold text-slate-900">ClassPulse Twin</span>
+        </div>
+        <div className="p-4 sm:p-6 max-w-7xl mx-auto">
           <Outlet />
         </div>
       </main>
@@ -142,7 +154,7 @@ function StudentChatbot() {
             initial={{ opacity: 0, y: 20, scale: 0.9 }}
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 20, scale: 0.9 }}
-            className="absolute bottom-16 right-0 w-80 h-96 bg-white rounded-2xl shadow-2xl border border-slate-300 overflow-hidden flex flex-col"
+            className="absolute bottom-16 right-0 w-[calc(100vw-3rem)] sm:w-80 h-[70vh] sm:h-96 bg-white rounded-2xl shadow-2xl border border-slate-300 overflow-hidden flex flex-col"
           >
             <div className="shrink-0 flex items-center justify-between px-4 py-3 bg-indigo-600 text-white">
               <span className="text-sm font-semibold">AI 학습 도우미</span>

@@ -69,7 +69,7 @@ const ChatbotModal: React.FC = () => {
             animate={{ opacity: 1, y: 0, scale: 1 }}
             exit={{ opacity: 0, y: 40, scale: 0.95 }}
             transition={MODAL_SPRING}
-            className="fixed bottom-24 right-8 z-50 w-[420px] h-[580px] flex flex-col rounded-2xl bg-white shadow-2xl border border-slate-300/50 overflow-hidden"
+            className="fixed inset-3 z-50 sm:inset-auto sm:bottom-24 sm:right-8 w-auto sm:w-[420px] h-auto sm:h-[580px] flex flex-col rounded-2xl bg-white shadow-2xl border border-slate-300/50 overflow-hidden"
           >
             {/* Header */}
             <div

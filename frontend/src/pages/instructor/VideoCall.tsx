@@ -13,7 +13,7 @@ export default function InstructorVideoCall() {
 
   if (!consultationId) {
     return (
-      <div className="h-[calc(100vh-120px)] flex items-center justify-center">
+      <div className="h-[calc(100vh-80px)] sm:h-[calc(100vh-120px)] flex items-center justify-center">
         <div className="text-center">
           <p className="text-sm text-slate-500 mb-3">유효하지 않은 상담입니다.</p>
           <button
@@ -28,7 +28,7 @@ export default function InstructorVideoCall() {
   }
 
   return (
-    <div className="h-[calc(100vh-120px)]">
+    <div className="h-[calc(100vh-80px)] sm:h-[calc(100vh-120px)]">
       <VideoPanel
         consultationId={Number(consultationId)}
         role="instructor"

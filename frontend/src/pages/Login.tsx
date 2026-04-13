@@ -60,7 +60,7 @@ export default function Login() {
       </div>
 
       {/* Right form panel */}
-      <div className="flex-1 flex items-center justify-center p-8 bg-slate-50">
+      <div className="flex-1 flex items-center justify-center p-4 sm:p-8 bg-slate-50">
         <div className="w-full max-w-md">
           <div className="mb-8">
             <h1 className="text-2xl font-extrabold text-slate-900">로그인</h1>

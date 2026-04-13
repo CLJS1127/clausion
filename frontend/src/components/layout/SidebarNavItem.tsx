@@ -1,4 +1,5 @@
 import { useNavigate, useLocation } from 'react-router-dom';
+import { useSidebarStore } from '../../store/sidebarStore';
 
 interface SidebarNavItemProps {
   id: string;
@@ -11,6 +12,7 @@ interface SidebarNavItemProps {
 export default function SidebarNavItem({ label, icon, path, badge }: SidebarNavItemProps) {
   const navigate = useNavigate();
   const location = useLocation();
+  const closeMobile = useSidebarStore((s) => s.closeMobile);
 
   const isActive = path.endsWith('/')
     ? location.pathname === path || location.pathname === path.slice(0, -1)
@@ -18,6 +20,7 @@ export default function SidebarNavItem({ label, icon, path, badge }: SidebarNavI
 
   const handleClick = () => {
     navigate(path);
+    closeMobile();
   };
 
   return (

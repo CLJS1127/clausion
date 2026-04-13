@@ -16,7 +16,7 @@ const Dashboard: React.FC = () => {
     <div className="min-h-screen bg-slate-50">
       {/* Top header */}
       <header className="sticky top-0 z-30 bg-white/80 backdrop-blur border-b border-slate-100">
-        <div className="max-w-7xl mx-auto px-6 py-3 flex items-center justify-between">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 flex items-center justify-between">
           <div>
             <h1 className="text-xl font-bold text-slate-900">
               ClassPulse Twin
@@ -32,17 +32,17 @@ const Dashboard: React.FC = () => {
       </header>
 
       {/* Main content */}
-      <main className="max-w-7xl mx-auto px-6 py-6">
-        <div className="grid grid-cols-1 lg:grid-cols-7 gap-6">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 py-4 sm:py-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-7 gap-4 sm:gap-6">
           {/* Left Column (5/7) */}
-          <div className="lg:col-span-5 space-y-6">
+          <div className="md:col-span-2 lg:col-span-5 space-y-4 sm:space-y-6">
             <TodayActionPanel />
             <CodeEditorPanel />
             <ReviewTimeline />
           </div>
 
           {/* Right Column (2/7) */}
-          <div className="lg:col-span-2 space-y-6">
+          <div className="md:col-span-2 lg:col-span-2 space-y-4 sm:space-y-6">
             <TwinStateCard />
             <GamificationBar />
             <NextStepPrescriptionCard />

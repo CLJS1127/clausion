@@ -115,7 +115,7 @@ export default function VideoPanel({
         )}
 
         {/* PiP Local Video (bottom-right) */}
-        <div className="absolute bottom-3 right-3 w-32 h-24 rounded-lg border-2 border-slate-600 shadow-lg overflow-hidden bg-slate-800">
+        <div className="absolute bottom-3 right-3 w-20 h-16 sm:w-28 sm:h-20 md:w-32 md:h-24 rounded-lg border-2 border-slate-600 shadow-lg overflow-hidden bg-slate-800">
           <video
             ref={localVideoRef}
             autoPlay
@@ -180,7 +180,7 @@ export default function VideoPanel({
       </div>
 
       {/* Controls Bar */}
-      <div className="py-4 bg-slate-800/80 backdrop-blur-sm">
+      <div className="py-2 sm:py-4 bg-slate-800/80 backdrop-blur-sm">
         <VideoControls
           onEndCall={handleEndCall}
           micOn={isMicEnabled}

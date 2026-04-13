@@ -123,7 +123,7 @@ const TwinStateCard: React.FC = () => {
       </div>
 
       {/* Score Summary */}
-      <div className="grid grid-cols-3 gap-2 mt-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mt-4">
         {[
           { label: '이해도', value: radar.understanding },
           { label: '수행력', value: radar.execution },

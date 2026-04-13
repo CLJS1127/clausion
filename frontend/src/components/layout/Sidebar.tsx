@@ -125,18 +125,33 @@ const navByRole: Record<string, NavSection[]> = {
 };
 
 export default function Sidebar({ role }: SidebarProps) {
-  const { isCollapsed, toggleSidebar } = useSidebarStore();
+  const { isCollapsed, toggleSidebar, isMobileOpen, closeMobile } = useSidebarStore();
   const navigate = useNavigate();
   const location = useLocation();
   const sections = navByRole[role] ?? studentNav;
   const rolePrefix = `/${role}`;
 
+  const handleNavigate = (path: string) => {
+    navigate(path);
+    closeMobile();
+  };
+
   return (
-    <aside
-      className={`h-screen flex flex-col bg-white border-r border-slate-300 transition-all duration-200 ${
-        isCollapsed ? 'w-16' : 'w-60'
-      }`}
-    >
+    <>
+      {/* Mobile backdrop */}
+      {isMobileOpen && (
+        <div
+          className="fixed inset-0 z-40 bg-black/40 backdrop-blur-sm lg:hidden"
+          onClick={closeMobile}
+        />
+      )}
+      <aside
+        className={`h-screen flex flex-col bg-white border-r border-slate-300 transition-all duration-200
+          fixed z-50 lg:static
+          ${isMobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
+          ${isCollapsed ? 'w-16' : 'w-60'}
+        `}
+      >
       {/* Header */}
       <div className="flex items-center gap-2 px-4 h-14 border-b border-slate-100 flex-shrink-0">
         {!isCollapsed && (
@@ -181,7 +196,7 @@ export default function Sidebar({ role }: SidebarProps) {
                     return (
                       <button
                         key={item.id}
-                        onClick={() => navigate(fullPath)}
+                        onClick={() => handleNavigate(fullPath)}
                         className={`w-full flex items-center justify-center p-2 rounded-lg transition-colors ${
                           isActive
                             ? 'bg-gradient-to-r from-indigo-600 to-violet-600 text-white shadow-md shadow-indigo-500/20'
@@ -212,5 +227,6 @@ export default function Sidebar({ role }: SidebarProps) {
       {/* Footer */}
       {!isCollapsed && <UserInfoFooter />}
     </aside>
+    </>
   );
 }

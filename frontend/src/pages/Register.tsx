@@ -69,7 +69,7 @@ export default function Register() {
       </div>
 
       {/* Right form panel */}
-      <div className="flex-1 flex items-center justify-center p-8 bg-slate-50">
+      <div className="flex-1 flex items-center justify-center p-4 sm:p-8 bg-slate-50">
         <div className="w-full max-w-md">
           <div className="mb-8">
             <h1 className="text-2xl font-extrabold text-slate-900">회원가입</h1>
