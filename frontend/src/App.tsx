@@ -20,13 +20,14 @@ import StudentStudyGroups from './pages/student/StudyGroups';
 import StudentGroupChat from './pages/student/GroupChat';
 import StudentCourseEnroll from './pages/student/CourseEnroll';
 import StudentVideoCall from './pages/student/VideoCall';
+import StudentAnnouncements from './pages/student/Announcements';
 
 // Operator Pages
 import OperatorDashboard from './pages/operator/Dashboard';
 import CourseManagement from './pages/operator/CourseManagement';
+import CourseDetail from './pages/operator/CourseDetail';
 import InstructorAnalysis from './pages/operator/InstructorAnalysis';
 import InterventionCenter from './pages/operator/InterventionCenter';
-import AttendanceManagement from './pages/operator/AttendanceManagement';
 import AnnouncementList from './pages/operator/AnnouncementList';
 import OperationReports from './pages/operator/OperationReports';
 import WhatIfSimulation from './pages/operator/WhatIfSimulation';
@@ -46,6 +47,8 @@ import InstructorConsultations from './pages/instructor/Consultations';
 import Enrollments from './pages/instructor/Enrollments';
 import CourseCreate from './pages/instructor/CourseCreate';
 import InstructorVideoCall from './pages/instructor/VideoCall';
+import InstructorAttendance from './pages/instructor/AttendanceManagement';
+import InstructorAnnouncements from './pages/instructor/Announcements';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -101,6 +104,7 @@ export default function App() {
             <Route path="consultation/:id" element={<StudentConsultation />} />
             <Route path="consultation/:consultationId/video" element={<StudentVideoCall />} />
             <Route path="next-step" element={<StudentNextStep />} />
+            <Route path="announcements" element={<StudentAnnouncements />} />
             <Route path="profile" element={<Profile />} />
           </Route>
 
@@ -120,9 +124,11 @@ export default function App() {
             <Route path="enrollments" element={<Enrollments />} />
             <Route path="students" element={<Students />} />
             <Route path="students/:studentId" element={<StudentDetail />} />
+            <Route path="attendance" element={<InstructorAttendance />} />
             <Route path="consultations" element={<InstructorConsultations />} />
             <Route path="consultation/:id" element={<InstructorConsultations />} />
             <Route path="consultation/:consultationId/video" element={<InstructorVideoCall />} />
+            <Route path="announcements" element={<InstructorAnnouncements />} />
             <Route path="profile" element={<Profile />} />
           </Route>
 
@@ -137,9 +143,9 @@ export default function App() {
           >
             <Route index element={<OperatorDashboard />} />
             <Route path="courses" element={<CourseManagement />} />
+            <Route path="courses/:courseId" element={<CourseDetail />} />
             <Route path="instructors" element={<InstructorAnalysis />} />
             <Route path="intervention" element={<InterventionCenter />} />
-            <Route path="attendance" element={<AttendanceManagement />} />
             <Route path="announcements" element={<AnnouncementList />} />
             <Route path="reports" element={<OperationReports />} />
             <Route path="simulation" element={<WhatIfSimulation />} />

@@ -50,6 +50,12 @@ const studentNav: NavSection[] = [
       { id: 'next-step', label: '다음 단계', icon: '🎯', path: 'next-step' },
     ],
   },
+  {
+    title: '소통',
+    items: [
+      { id: 'announcements', label: '공지사항', icon: '📢', path: 'announcements' },
+    ],
+  },
 ];
 
 const instructorNav: NavSection[] = [
@@ -65,9 +71,21 @@ const instructorNav: NavSection[] = [
     ],
   },
   {
+    title: '출결',
+    items: [
+      { id: 'attendance', label: '출결 관리', icon: '📝', path: 'attendance' },
+    ],
+  },
+  {
     title: '상담',
     items: [
       { id: 'consultations', label: '1:1 상담', icon: '📅', path: 'consultations' },
+    ],
+  },
+  {
+    title: '소통',
+    items: [
+      { id: 'announcements', label: '공지사항', icon: '📢', path: 'announcements' },
     ],
   },
 ];
@@ -93,7 +111,6 @@ const operatorNav: NavSection[] = [
     title: '과정 운영',
     items: [
       { id: 'courses', label: '과정 편성', icon: '📋', path: 'courses' },
-      { id: 'attendance', label: '출결 관리', icon: '📝', path: 'attendance' },
     ],
   },
   {

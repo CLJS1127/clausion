@@ -12,12 +12,24 @@ const summaryKeyLabels: Record<string, string> = {
   avgAttendance: '평균 출석률',
   avgAttendanceRate: '평균 출석률',
   totalConsultations: '총 상담 수',
+  consultationCount: '상담 횟수',
   interventionCount: '개입 횟수',
   completionRate: '수료율',
   activeCourses: '진행 과정',
+  totalCourses: '전체 과정',
   totalInstructors: '교강사 수',
   avgOverallRisk: '평균 위험도',
   newEnrollments: '신규 등록',
+  dropoutRate: '이탈률',
+  avgExecution: '평균 실행력',
+  avgRetentionRisk: '평균 망각 위험',
+  totalSessions: '총 세션',
+  absentCount: '결석 수',
+  lateCount: '지각 수',
+  pendingInterventions: '대기 중 개입',
+  resolvedInterventions: '처리된 개입',
+  weeklyGrowth: '주간 성장률',
+  overallHealth: '전체 건강도',
 };
 
 const urgencyLabels: Record<string, string> = {
@@ -51,7 +63,7 @@ export default function OperationReports() {
 
       {/* Instructor Effectiveness Comparison Chart */}
       <GlassCard className="p-5">
-        <h2 className="text-sm font-bold text-slate-900 mb-4">교강사 효과성 비교 (학생 Twin 평균)</h2>
+        <h2 className="text-sm font-bold text-slate-900 mb-4">교강사 효과성 비교 (학생 트윈 평균)</h2>
         {effectiveness && effectiveness.length > 0 ? (
           <ResponsiveContainer width="100%" height={280}>
             <BarChart data={effectiveness} margin={{ top: 5, right: 30, left: 20, bottom: 5 }}>
