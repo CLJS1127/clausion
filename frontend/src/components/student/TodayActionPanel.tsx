@@ -7,7 +7,7 @@ import { reviewsApi } from '../../api/reviews';
 import { useCourseId } from '../../hooks/useCourseId';
 import { useAuthStore } from '../../store/authStore';
 import type { Recommendation, ReviewTask } from '../../types';
-import { getRecommendationAction } from '../../utils/recommendations';
+import { getRecommendationAction, normalizeType } from '../../utils/recommendations';
 
 type ActionItem = {
   id: string;
@@ -76,7 +76,7 @@ const TodayActionPanel: React.FC = () => {
       .map((recommendation) => {
         const config =
           TODAY_BADGES[
-            recommendation.recommendationType.toLowerCase() as keyof typeof TODAY_BADGES
+            normalizeType(recommendation.recommendationType) as keyof typeof TODAY_BADGES
           ] ?? TODAY_BADGES.resource;
         const action = getRecommendationAction(recommendation.recommendationType);
         return {

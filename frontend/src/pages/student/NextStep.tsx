@@ -6,7 +6,7 @@ import { recommendationsApi } from '../../api/recommendations';
 import { useCourseId } from '../../hooks/useCourseId';
 import { useAuthStore } from '../../store/authStore';
 import type { Recommendation } from '../../types';
-import { getRecommendationAction } from '../../utils/recommendations';
+import { getRecommendationAction, normalizeType } from '../../utils/recommendations';
 
 const TYPE_CONFIG: Record<
   string,
@@ -65,7 +65,7 @@ const NextStep: React.FC = () => {
   const filtered =
     filter === 'all'
       ? list
-      : list.filter((r) => r.recommendationType === filter);
+      : list.filter((r) => normalizeType(r.recommendationType) === filter);
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -83,7 +83,7 @@ const NextStep: React.FC = () => {
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           {Object.entries(TYPE_CONFIG).map(([key, config]) => {
             const count = list.filter(
-              (r) => r.recommendationType === key,
+              (r) => normalizeType(r.recommendationType) === key,
             ).length;
             return (
               <div
@@ -127,7 +127,7 @@ const NextStep: React.FC = () => {
         <div className="space-y-4">
           {filtered.map((rec, i) => {
             const config =
-              TYPE_CONFIG[rec.recommendationType] ?? TYPE_CONFIG.review;
+              TYPE_CONFIG[normalizeType(rec.recommendationType)] ?? TYPE_CONFIG.review;
             const triggerLabel =
               TRIGGER_LABELS[rec.triggerEvent] ?? rec.triggerEvent;
             const action = getRecommendationAction(rec.recommendationType);

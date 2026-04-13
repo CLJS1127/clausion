@@ -6,7 +6,7 @@ import { recommendationsApi } from '../../api/recommendations';
 import { useAuthStore } from '../../store/authStore';
 import { useCourseId } from '../../hooks/useCourseId';
 import type { Recommendation } from '../../types';
-import { getRecommendationAction } from '../../utils/recommendations';
+import { getRecommendationAction, normalizeType } from '../../utils/recommendations';
 
 const TYPE_STYLES: Record<string, { accent: string; icon: string }> = {
   review: { accent: 'from-indigo-500 to-violet-500', icon: '📖' },
@@ -45,7 +45,7 @@ const NextStepPrescriptionCard: React.FC = () => {
       ) : (
       <div className="space-y-3">
         {list.map((rec, i) => {
-          const style = TYPE_STYLES[rec.recommendationType] ?? TYPE_STYLES.review;
+          const style = TYPE_STYLES[normalizeType(rec.recommendationType)] ?? TYPE_STYLES.review;
           const isFirst = i === 0;
           const action = getRecommendationAction(rec.recommendationType);
           return (
