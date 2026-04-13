@@ -110,7 +110,12 @@ export default function WhatIfSimulation() {
             <label className="block text-sm font-medium text-slate-700 mb-1">대상 수강생</label>
             <select
               value={targetStudentId}
-              onChange={(e) => setTargetStudentId(e.target.value)}
+              onChange={(e) => {
+                const sid = e.target.value;
+                setTargetStudentId(sid);
+                const selected = students?.find(s => s.id === sid);
+                setTargetCourseId(selected?.courseId ?? '');
+              }}
               className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm bg-white"
             >
               <option value="">수강생 선택</option>
@@ -127,7 +132,13 @@ export default function WhatIfSimulation() {
               className="w-full px-3 py-2 rounded-lg border border-slate-300 text-sm bg-white"
             >
               <option value="">과정 선택</option>
-              {courses?.map((c) => (
+              {(targetStudentId
+                ? courses?.filter((c) => {
+                    const selectedStudent = students?.find(s => s.id === targetStudentId);
+                    return selectedStudent?.courseId === String(c.id);
+                  })
+                : courses
+              )?.map((c) => (
                 <option key={c.id} value={c.id}>{c.title}</option>
               ))}
             </select>

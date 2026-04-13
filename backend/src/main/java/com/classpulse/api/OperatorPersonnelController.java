@@ -77,6 +77,7 @@ public class OperatorPersonnelController {
             m.put("id", s.getId());
             m.put("name", s.getName());
             m.put("email", s.getEmail());
+            m.put("courseId", latest != null ? latest.getCourse().getId() : null);
             m.put("courseTitle", latest != null ? latest.getCourse().getTitle() : "-");
             m.put("overallRisk", latest != null ? latest.getOverallRiskScore() : BigDecimal.ZERO);
             m.put("trend", latest != null && latest.getTrendDirection() != null ? latest.getTrendDirection() : "STABLE");

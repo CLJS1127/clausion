@@ -48,7 +48,7 @@ export const operatorApi = {
     api.get<Array<{ id: string; name: string; email: string; courseCount: number; studentCount: number; consultationCount: number }>>('/api/operator/instructors'),
 
   getStudents: () =>
-    api.get<Array<{ id: string; name: string; email: string; courseTitle: string; overallRisk: number; trend: string; attendanceRate: number }>>('/api/operator/students'),
+    api.get<Array<{ id: string; name: string; email: string; courseId: string | null; courseTitle: string; overallRisk: number; trend: string; attendanceRate: number }>>('/api/operator/students'),
 
   getAtRiskStudents: () =>
     api.get<Array<{ id: string; name: string; courseId: string; courseTitle: string; overallRisk: number; trend: string; consecutiveAbsences: number; aiSuggestion: string }>>('/api/operator/students/at-risk'),
