@@ -8,6 +8,7 @@ import com.classpulse.domain.user.UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
@@ -44,6 +45,7 @@ public class OperatorInviteController {
     public record CreateInviteRequest(Integer expiryDays) {}
 
     @GetMapping
+    @Transactional(readOnly = true)
     public ResponseEntity<List<InviteCodeResponse>> list() {
         List<InviteCodeResponse> codes = registrationCodeRepository.findAllByOrderByCreatedAtDesc()
                 .stream()
@@ -53,6 +55,7 @@ public class OperatorInviteController {
     }
 
     @PostMapping
+    @Transactional
     public ResponseEntity<InviteCodeResponse> create(@RequestBody(required = false) CreateInviteRequest request) {
         Long userId = SecurityUtil.getCurrentUserId();
         User operator = userService.findById(userId);
@@ -73,6 +76,7 @@ public class OperatorInviteController {
     }
 
     @DeleteMapping("/{id}")
+    @Transactional
     public ResponseEntity<Void> delete(@PathVariable Long id) {
         registrationCodeRepository.deleteById(id);
         return ResponseEntity.noContent().build();
