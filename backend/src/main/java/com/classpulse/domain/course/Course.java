@@ -3,6 +3,7 @@ package com.classpulse.domain.course;
 import com.classpulse.domain.user.User;
 import jakarta.persistence.*;
 import lombok.*;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -26,6 +27,12 @@ public class Course {
 
     @Column(name = "class_time", length = 50)
     private String classTime;
+
+    @Column(name = "start_date")
+    private LocalDate startDate;
+
+    @Column(name = "end_date")
+    private LocalDate endDate;
 
     @Column(length = 20)
     private String status = "ACTIVE";

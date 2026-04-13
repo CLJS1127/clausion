@@ -31,6 +31,8 @@ export interface Course {
   description: string;
   schedule?: string;
   classTime?: string;
+  startDate?: string;
+  endDate?: string;
   status: string;
   approvalStatus?: 'PENDING' | 'APPROVED' | 'REJECTED';
   approvalNote?: string;

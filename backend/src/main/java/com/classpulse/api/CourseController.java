@@ -9,6 +9,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.time.LocalDate;
 import java.util.List;
 
 @RestController
@@ -22,10 +23,11 @@ public class CourseController {
 
     // --- DTOs ---
 
-    public record CreateCourseRequest(String title, String description, String schedule, String classTime) {}
+    public record CreateCourseRequest(String title, String description, String schedule, String classTime, LocalDate startDate, LocalDate endDate) {}
 
     public record CourseResponse(
             Long id, String title, String description, String schedule, String classTime,
+            LocalDate startDate, LocalDate endDate,
             String status, Long createdById, String createdByName,
             List<WeekResponse> weeks, int enrollmentCount
     ) {
@@ -36,6 +38,7 @@ public class CourseController {
             return new CourseResponse(
                     c.getId(), c.getTitle(), c.getDescription(),
                     c.getSchedule(), c.getClassTime(),
+                    c.getStartDate(), c.getEndDate(),
                     c.getStatus(),
                     c.getCreatedBy() != null ? c.getCreatedBy().getId() : null,
                     c.getCreatedBy() != null ? c.getCreatedBy().getName() : null,
@@ -60,6 +63,8 @@ public class CourseController {
                 .description(request.description())
                 .schedule(request.schedule())
                 .classTime(request.classTime())
+                .startDate(request.startDate())
+                .endDate(request.endDate())
                 .createdBy(instructor)
                 .status("ACTIVE")
                 .build();

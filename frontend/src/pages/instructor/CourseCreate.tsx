@@ -11,6 +11,8 @@ export default function CourseCreate() {
   const [description, setDescription] = useState('');
   const [schedule, setSchedule] = useState('');
   const [classTime, setClassTime] = useState('');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
 
   const days = ['월', '화', '수', '목', '금', '토', '일'];
   const selectedDays = schedule ? schedule.split(',').filter(Boolean) : [];
@@ -28,6 +30,8 @@ export default function CourseCreate() {
         description,
         schedule: schedule || undefined,
         classTime: classTime || undefined,
+        startDate: startDate || undefined,
+        endDate: endDate || undefined,
       }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['courses'] });
@@ -65,6 +69,37 @@ export default function CourseCreate() {
             rows={4}
             className="w-full px-4 py-2.5 rounded-xl border border-slate-300 text-sm focus:outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 transition-all resize-none"
           />
+        </div>
+
+        <div className="bg-white/85 backdrop-blur-[12px] border border-white/60 rounded-2xl shadow-lg p-6">
+          <label className="block text-sm font-semibold text-slate-800 mb-3">수강 기간</label>
+          <div className="flex items-center gap-3">
+            <div className="flex-1">
+              <label className="block text-xs text-slate-500 mb-1">시작일</label>
+              <input
+                type="date"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                className="w-full px-4 py-2.5 rounded-xl border border-slate-300 text-sm focus:outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 transition-all"
+              />
+            </div>
+            <span className="text-slate-400 mt-5">~</span>
+            <div className="flex-1">
+              <label className="block text-xs text-slate-500 mb-1">종료일</label>
+              <input
+                type="date"
+                value={endDate}
+                min={startDate || undefined}
+                onChange={(e) => setEndDate(e.target.value)}
+                className="w-full px-4 py-2.5 rounded-xl border border-slate-300 text-sm focus:outline-none focus:border-indigo-400 focus:ring-2 focus:ring-indigo-100 transition-all"
+              />
+            </div>
+          </div>
+          {startDate && endDate && (
+            <p className="text-xs text-slate-400 mt-2">
+              총 {Math.ceil((new Date(endDate).getTime() - new Date(startDate).getTime()) / (1000 * 60 * 60 * 24))}일간 진행
+            </p>
+          )}
         </div>
 
         <div className="bg-white/85 backdrop-blur-[12px] border border-white/60 rounded-2xl shadow-lg p-6">
