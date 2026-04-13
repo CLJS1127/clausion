@@ -114,15 +114,35 @@ public class CourseController {
     }
 
     @PostMapping("/{id}/enroll")
-    public ResponseEntity<EnrollResponse> enroll(@PathVariable Long id) {
+    public ResponseEntity<?> enroll(@PathVariable Long id) {
         Long userId = SecurityUtil.getCurrentUserId();
 
         if (enrollmentRepository.existsByCourseIdAndStudentId(id, userId)) {
-            return ResponseEntity.status(HttpStatus.CONFLICT).build();
+            return ResponseEntity.status(HttpStatus.CONFLICT)
+                    .body(java.util.Map.of("message", "이미 수강 신청한 과정입니다."));
         }
 
         Course course = courseRepository.findById(id)
                 .orElseThrow(() -> new IllegalArgumentException("Course not found: " + id));
+
+        // Date overlap check with ACTIVE/PENDING enrollments
+        if (course.getStartDate() != null && course.getEndDate() != null) {
+            List<CourseEnrollment> myEnrollments = enrollmentRepository.findByStudentId(userId);
+            for (CourseEnrollment existing : myEnrollments) {
+                if (!"ACTIVE".equals(existing.getStatus()) && !"PENDING".equals(existing.getStatus())) continue;
+                Course existingCourse = existing.getCourse();
+                if (existingCourse.getStartDate() != null && existingCourse.getEndDate() != null) {
+                    boolean overlaps = !course.getStartDate().isAfter(existingCourse.getEndDate())
+                            && !course.getEndDate().isBefore(existingCourse.getStartDate());
+                    if (overlaps) {
+                        return ResponseEntity.status(HttpStatus.CONFLICT)
+                                .body(java.util.Map.of("message",
+                                        "'" + existingCourse.getTitle() + "' 과정과 수강 기간이 겹칩니다."));
+                    }
+                }
+            }
+        }
+
         User student = userService.findById(userId);
 
         CourseEnrollment enrollment = CourseEnrollment.builder()
@@ -133,7 +153,8 @@ public class CourseController {
         try {
             enrollment = enrollmentRepository.save(enrollment);
         } catch (org.springframework.dao.DataIntegrityViolationException e) {
-            return ResponseEntity.status(HttpStatus.CONFLICT).build();
+            return ResponseEntity.status(HttpStatus.CONFLICT)
+                    .body(java.util.Map.of("message", "이미 수강 신청한 과정입니다."));
         }
 
         return ResponseEntity.status(HttpStatus.CREATED)

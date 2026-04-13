@@ -19,6 +19,7 @@ export default function CourseEnroll() {
   const [confirm, setConfirm] = useState<Course | null>(null);
   const [detailId, setDetailId] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState('');
+  const [errorMessage, setErrorMessage] = useState('');
 
   const { data: courses = [], isLoading } = useQuery<Course[]>({
     queryKey: ['all-courses'],
@@ -50,6 +51,11 @@ export default function CourseEnroll() {
       setConfirm(null);
       setSuccessMessage('수강 신청이 완료되었습니다! 교강사 승인을 기다려주세요.');
       setTimeout(() => setSuccessMessage(''), 4000);
+    },
+    onError: (error: Error) => {
+      setConfirm(null);
+      setErrorMessage(error.message || '수강 신청에 실패했습니다.');
+      setTimeout(() => setErrorMessage(''), 5000);
     },
   });
 
@@ -84,6 +90,15 @@ export default function CourseEnroll() {
         </div>
       )}
 
+      {errorMessage && (
+        <div className="fixed top-4 left-1/2 -translate-x-1/2 z-[70] flex items-center gap-3 bg-rose-600 text-white text-sm font-medium px-5 py-3 rounded-xl shadow-lg">
+          <svg className="w-5 h-5 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+          </svg>
+          {errorMessage}
+        </div>
+      )}
+
       <main className="max-w-5xl mx-auto px-6 py-6 space-y-4">
         {isLoading && (
           <div className="space-y-4">
@@ -100,7 +115,7 @@ export default function CourseEnroll() {
           </div>
         )}
 
-        {courses.map((course, i) => {
+        {courses.filter((c) => getEnrollmentStatus(c.id) !== 'ACTIVE').map((course, i) => {
           const status = getEnrollmentStatus(course.id);
           const badge = status ? STATUS_LABEL[status] : null;
 
