@@ -2,6 +2,8 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import SidebarNavItem from './SidebarNavItem';
 import UserInfoFooter from './UserInfoFooter';
 import { useSidebarStore } from '../../store/sidebarStore';
+import { useCourses } from '../../hooks/useCourseId';
+import { useCourseStore } from '../../store/courseStore';
 
 interface SidebarProps {
   role: 'student' | 'instructor' | 'operator';
@@ -124,6 +126,32 @@ const navByRole: Record<string, NavSection[]> = {
   operator: operatorNav,
 };
 
+function CourseSelector() {
+  const { data: courses = [] } = useCourses();
+  const { selectedCourseId, setSelectedCourseId } = useCourseStore();
+
+  if (courses.length <= 1) return null;
+
+  const current = selectedCourseId ?? courses[0]?.id?.toString();
+
+  return (
+    <div className="px-3 py-2 border-b border-slate-100">
+      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5 px-1">과정</p>
+      <select
+        value={current ?? ''}
+        onChange={(e) => setSelectedCourseId(e.target.value)}
+        className="w-full px-2.5 py-1.5 text-xs font-medium text-slate-700 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:border-indigo-400 truncate"
+      >
+        {courses.map((c) => (
+          <option key={c.id} value={String(c.id)}>
+            {c.title}{(c as any).enrollmentCount != null ? ` (${(c as any).enrollmentCount}명)` : ''}
+          </option>
+        ))}
+      </select>
+    </div>
+  );
+}
+
 export default function Sidebar({ role }: SidebarProps) {
   const { isCollapsed, toggleSidebar, isMobileOpen, closeMobile } = useSidebarStore();
   const navigate = useNavigate();
@@ -175,6 +203,9 @@ export default function Sidebar({ role }: SidebarProps) {
           </svg>
         </button>
       </div>
+
+      {/* Course Selector (instructor/student) */}
+      {(role === 'instructor' || role === 'student') && !isCollapsed && <CourseSelector />}
 
       {/* Navigation */}
       <nav className="flex-1 overflow-y-auto px-2 py-3 space-y-4">
