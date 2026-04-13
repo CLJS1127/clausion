@@ -31,6 +31,7 @@ export default function AppShell({ role }: AppShellProps) {
   const [toasts, setToasts] = useState<ToastInfo[]>([]);
   const handledNotifKey = useRef<string | null>(null);
   const handledToastKeys = useRef<Set<string>>(new Set());
+  const initialLoadRef = useRef(true);
 
   // Listen for INCOMING_CALL notifications (student side)
   useEffect(() => {
@@ -66,8 +67,21 @@ export default function AppShell({ role }: AppShellProps) {
     }
   }, [notifications, role, markAsRead]);
 
-  // Show toast notifications for newly arrived actionable events across roles.
+  // Show toast notifications only for NEW real-time arrivals (not on initial load).
   useEffect(() => {
+    // On the first render cycle after mount, mark all existing notification IDs
+    // as "already handled" so they don't trigger toasts on page load / SSE reconnect.
+    if (initialLoadRef.current) {
+      notifications.forEach((n) => {
+        const key = n.id ?? `${n.createdAt ?? ''}_${n.type}`;
+        handledToastKeys.current.add(key);
+      });
+      if (notifications.length > 0) {
+        initialLoadRef.current = false;
+      }
+      return;
+    }
+
     const latest = notifications[0];
     if (!latest || latest.isRead) return;
     if (latest.type === 'INCOMING_CALL' || latest.type === 'UNREAD_COUNT') return;
