@@ -1,9 +1,15 @@
+import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { operatorApi } from '../../api/operator';
 import GlassCard from '../../components/common/GlassCard';
 
+type AtRiskStudent = { id: string; name: string; courseId: string; courseTitle: string; overallRisk: number; trend: string; consecutiveAbsences: number; aiSuggestion: string };
+
 export default function AtRiskStudents() {
   const queryClient = useQueryClient();
+  const [approvedIds, setApprovedIds] = useState<Set<string>>(new Set());
+  const [detailStudent, setDetailStudent] = useState<AtRiskStudent | null>(null);
+  const [error, setError] = useState<string | null>(null);
 
   const { data: atRisk, isLoading } = useQuery({
     queryKey: ['operator', 'at-risk'],
@@ -12,10 +18,19 @@ export default function AtRiskStudents() {
 
   const interventionMutation = useMutation({
     mutationFn: operatorApi.createIntervention,
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['operator'] }),
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['operator'] });
+      setApprovedIds((prev) => new Set(prev).add(variables.studentId));
+      setError(null);
+    },
+    onError: (err: Error) => {
+      console.error('Intervention failed:', err);
+      setError(err.message || '개입 승인에 실패했습니다.');
+    },
   });
 
   const handleIntervene = (student: { id: string; courseId: string; aiSuggestion: string }) => {
+    setError(null);
     interventionMutation.mutate({
       studentId: student.id,
       courseId: student.courseId,
@@ -70,20 +85,58 @@ export default function AtRiskStudents() {
                 </div>
 
                 <div className="ml-4 flex flex-col gap-2">
+                  {approvedIds.has(student.id) ? (
+                    <span className="px-4 py-2 rounded-lg bg-emerald-50 text-emerald-700 text-xs font-bold text-center border border-emerald-200">
+                      승인됨
+                    </span>
+                  ) : (
+                    <button
+                      onClick={() => handleIntervene(student)}
+                      disabled={interventionMutation.isPending}
+                      className="px-4 py-2 rounded-lg bg-indigo-600 text-white text-xs font-bold hover:bg-indigo-700 disabled:opacity-50 transition-colors"
+                    >
+                      {interventionMutation.isPending ? '처리 중...' : '개입 승인'}
+                    </button>
+                  )}
                   <button
-                    onClick={() => handleIntervene(student)}
-                    disabled={interventionMutation.isPending}
-                    className="px-4 py-2 rounded-lg bg-indigo-600 text-white text-xs font-bold hover:bg-indigo-700 disabled:opacity-50 transition-colors"
+                    onClick={() => setDetailStudent(detailStudent?.id === student.id ? null : student)}
+                    className="px-4 py-2 rounded-lg bg-slate-100 text-slate-600 text-xs font-medium hover:bg-slate-200 transition-colors"
                   >
-                    개입 승인
-                  </button>
-                  <button className="px-4 py-2 rounded-lg bg-slate-100 text-slate-600 text-xs font-medium hover:bg-slate-200 transition-colors">
-                    상세 보기
+                    {detailStudent?.id === student.id ? '접기' : '상세 보기'}
                   </button>
                 </div>
               </div>
+              {/* Detail panel */}
+              {detailStudent?.id === student.id && (
+                <div className="mt-4 pt-4 border-t border-slate-100 space-y-2">
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    <div className="rounded-lg bg-slate-50 p-3 text-center">
+                      <p className="text-lg font-bold text-slate-800">{Math.round(student.overallRisk)}%</p>
+                      <p className="text-[10px] text-slate-500">종합 위험도</p>
+                    </div>
+                    <div className="rounded-lg bg-slate-50 p-3 text-center">
+                      <p className="text-lg font-bold text-slate-800">{student.consecutiveAbsences}</p>
+                      <p className="text-[10px] text-slate-500">연속 결석</p>
+                    </div>
+                    <div className="rounded-lg bg-slate-50 p-3 text-center">
+                      <p className="text-lg font-bold text-slate-800">{student.trend === 'IMPROVING' ? '개선' : student.trend === 'DECLINING' ? '하락' : '유지'}</p>
+                      <p className="text-[10px] text-slate-500">추세</p>
+                    </div>
+                    <div className="rounded-lg bg-slate-50 p-3 text-center">
+                      <p className="text-sm font-bold text-slate-800 truncate">{student.courseTitle}</p>
+                      <p className="text-[10px] text-slate-500">과정</p>
+                    </div>
+                  </div>
+                </div>
+              )}
             </GlassCard>
           ))}
+
+          {error && (
+            <div className="p-3 rounded-lg bg-rose-50 border border-rose-200">
+              <p className="text-sm text-rose-700">{error}</p>
+            </div>
+          )}
         </div>
       ) : (
         <GlassCard className="p-8 text-center">
