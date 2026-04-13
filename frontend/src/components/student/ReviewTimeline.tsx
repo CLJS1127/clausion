@@ -5,7 +5,7 @@ import { reviewsApi } from '../../api/reviews';
 import { useCourseId } from '../../hooks/useCourseId';
 import type { WeekDaySummary } from '../../api/reviews';
 
-type DayStatus = 'completed' | 'partial' | 'missed' | 'today' | 'future';
+type DayStatus = 'completed' | 'partial' | 'missed' | 'today' | 'future' | 'empty';
 
 const STATUS_STYLES: Record<
   DayStatus,
@@ -41,10 +41,16 @@ const STATUS_STYLES: Record<
     text: 'text-slate-400',
     label: '-',
   },
+  empty: {
+    bg: 'bg-slate-100',
+    ring: '',
+    text: 'text-slate-300',
+    label: '-',
+  },
 };
 
 function getStatusLabel(day: WeekDaySummary): string {
-  if (day.status === 'future') return '-';
+  if (day.status === 'future' || day.status === 'empty') return '-';
   if (day.status === 'today') return '!';
   if (day.total === 0) return '-';
   return `${day.completed}/${day.total}`;
@@ -87,7 +93,7 @@ const ReviewTimeline: React.FC = () => {
 
       <div className="flex items-center justify-between px-2">
         {week.map((day, i) => {
-          const style = STATUS_STYLES[day.status];
+          const style = STATUS_STYLES[day.status] ?? STATUS_STYLES.empty;
           return (
             <React.Fragment key={day.date}>
               {i > 0 && (
