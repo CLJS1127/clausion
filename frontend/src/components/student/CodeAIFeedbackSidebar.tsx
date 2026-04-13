@@ -46,7 +46,7 @@ const CodeAIFeedbackSidebar: React.FC<CodeAIFeedbackSidebarProps> = ({
   onFeedbackHover,
 }) => {
   return (
-    <div className="w-52 shrink-0 overflow-y-auto border-l border-slate-300 bg-slate-50 p-3">
+    <div className="w-full sm:w-44 lg:w-52 shrink-0 overflow-y-auto border-t sm:border-t-0 sm:border-l border-slate-300 bg-slate-50 p-3 max-h-48 sm:max-h-none">
       <h3 className="text-xs font-bold text-slate-700 uppercase tracking-wider mb-3">
         AI 피드백
       </h3>
