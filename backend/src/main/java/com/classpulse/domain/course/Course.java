@@ -35,6 +35,7 @@ public class Course {
     private LocalDate endDate;
 
     @Column(length = 20)
+    @Builder.Default
     private String status = "ACTIVE";
 
     @ManyToOne(fetch = FetchType.LAZY)
@@ -51,12 +52,14 @@ public class Course {
     private List<CurriculumSkill> skills = new ArrayList<>();
 
     @Column(name = "approval_status", length = 20)
+    @Builder.Default
     private String approvalStatus = "PENDING";
 
     @Column(name = "approval_note")
     private String approvalNote;
 
     @Column(name = "max_capacity")
+    @Builder.Default
     private Integer maxCapacity = 30;
 
     @Column(name = "created_at")

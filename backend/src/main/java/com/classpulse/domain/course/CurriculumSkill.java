@@ -25,6 +25,7 @@ public class CurriculumSkill {
     private String description;
 
     @Column(length = 20)
+    @Builder.Default
     private String difficulty = "MEDIUM";
 
     @ManyToMany

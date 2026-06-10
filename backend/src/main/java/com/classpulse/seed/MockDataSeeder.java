@@ -442,7 +442,7 @@ public class MockDataSeeder implements CommandLineRunner {
 
     // ── Helpers ────────────────────────────────────────────────────────
     private Course mkCourse(String t, String d, User ins, String[][] wks) {
-        Course c = Course.builder().title(t).description(d).status("ACTIVE").createdBy(ins).build();
+        Course c = Course.builder().title(t).description(d).status("ACTIVE").approvalStatus("APPROVED").createdBy(ins).build();
         for (int i = 0; i < wks.length; i++) c.getWeeks().add(CourseWeek.builder().course(c).weekNo(i + 1).title(wks[i][0]).summary(wks[i][1]).build());
         em.persist(c); return c;
     }
