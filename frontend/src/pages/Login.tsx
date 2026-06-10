@@ -89,19 +89,19 @@ export default function Login() {
               </div>
             </div>
 
-            {/* Email */}
+            {/* Email or Username */}
             <div>
               <label htmlFor="email" className="block text-sm font-medium text-slate-700 mb-1">
-                이메일
+                이메일 또는 아이디
               </label>
               <input
                 id="email"
-                type="email"
+                type="text"
                 autoComplete="username"
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="example@university.ac.kr"
+                placeholder="example@university.ac.kr 또는 아이디"
                 className="w-full px-4 py-2.5 rounded-lg border border-slate-300 bg-white text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-400 transition-all"
               />
             </div>

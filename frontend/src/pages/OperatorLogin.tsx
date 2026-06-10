@@ -118,8 +118,8 @@ export default function OperatorLogin() {
           {mode === 'login' ? (
             <form onSubmit={handleLogin} className="space-y-5">
               <div>
-                <label htmlFor="email" className="block text-sm font-medium text-slate-700 mb-1">이메일</label>
-                <input id="email" type="email" autoComplete="username" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder="operator@classpulse.kr" className="w-full px-4 py-2.5 rounded-lg border border-slate-300 bg-white text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-500/40 focus:border-slate-400 transition-all" />
+                <label htmlFor="email" className="block text-sm font-medium text-slate-700 mb-1">이메일 또는 아이디</label>
+                <input id="email" type="text" autoComplete="username" required value={email} onChange={(e) => setEmail(e.target.value)} placeholder="operator@classpulse.kr 또는 아이디" className="w-full px-4 py-2.5 rounded-lg border border-slate-300 bg-white text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-500/40 focus:border-slate-400 transition-all" />
               </div>
               <div>
                 <label htmlFor="password" className="block text-sm font-medium text-slate-700 mb-1">비밀번호</label>
