@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import { instructorApi, type EnrollmentEntry } from '../../api/instructor';
 import { useCourses } from '../../hooks/useCourseId';
 import { toast } from '../../store/toastStore';
+import ConfirmModal from '../../components/common/ConfirmModal';
 
 const statusConfig: Record<string, { label: string; cls: string }> = {
   PENDING: { label: '대기', cls: 'bg-amber-50 text-amber-700 border-amber-200' },
@@ -22,6 +23,9 @@ export default function Enrollments() {
   const [selectedCourseId, setSelectedCourseId] = useState<string | null>(null);
   const [tab, setTab] = useState<'PENDING' | 'ALL'>('PENDING');
   const [confirm, setConfirm] = useState<{ action: 'approve' | 'reject'; entry: EnrollmentEntry } | null>(null);
+  const [selectedIds, setSelectedIds] = useState<Set<number>>(new Set());
+  const [showBulkConfirm, setShowBulkConfirm] = useState(false);
+  const [bulkProcessing, setBulkProcessing] = useState(false);
 
   // Auto-select first course
   const courseId = selectedCourseId ?? courses[0]?.id?.toString() ?? null;
@@ -61,6 +65,39 @@ export default function Enrollments() {
 
   const items = tab === 'PENDING' ? pending : all;
   const loading = tab === 'PENDING' ? pendingLoading : allLoading;
+
+  // 일괄 승인: 선택한 신청을 모두 승인하고 결과를 집계해 알린다
+  const handleBulkApprove = async () => {
+    if (!courseId || selectedIds.size === 0) return;
+    setBulkProcessing(true);
+    try {
+      const ids = Array.from(selectedIds);
+      const results = await Promise.allSettled(
+        ids.map((id) => instructorApi.approveEnrollment(courseId, id)),
+      );
+      const ok = results.filter((r) => r.status === 'fulfilled').length;
+      const fail = results.length - ok;
+      queryClient.invalidateQueries({ queryKey: ['instructor', 'enrollments', courseId] });
+      queryClient.invalidateQueries({ queryKey: ['instructor', 'students', courseId] });
+      setSelectedIds(new Set());
+      if (fail === 0) {
+        toast.success(`수강 신청 ${ok}건을 일괄 승인했습니다`);
+      } else {
+        toast.error(`${fail}건은 승인하지 못했습니다`, `${ok}건은 승인되었습니다. 잠시 후 다시 시도해주세요.`);
+      }
+    } finally {
+      setBulkProcessing(false);
+    }
+  };
+
+  const toggleSelect = (enrollmentId: number) => {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(enrollmentId)) next.delete(enrollmentId);
+      else next.add(enrollmentId);
+      return next;
+    });
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 via-white to-indigo-50/30">
@@ -141,10 +178,38 @@ export default function Enrollments() {
 
         {courseId && !loading && items.length > 0 && (
           <div className="bg-white/85 backdrop-blur-[12px] border border-white/60 rounded-2xl shadow-lg overflow-hidden">
+            {/* 일괄 처리 바 */}
+            {tab === 'PENDING' && selectedIds.size > 0 && (
+              <div className="flex items-center justify-between px-5 py-2.5 bg-indigo-50 border-b border-indigo-100">
+                <span className="text-xs font-semibold text-indigo-700">{selectedIds.size}명 선택됨</span>
+                <button
+                  onClick={() => setShowBulkConfirm(true)}
+                  disabled={bulkProcessing}
+                  className="px-4 py-1.5 rounded-lg bg-indigo-600 text-white text-xs font-bold hover:bg-indigo-700 disabled:opacity-50 transition-colors"
+                >
+                  {bulkProcessing ? '처리 중...' : '선택 일괄 승인'}
+                </button>
+              </div>
+            )}
             <div className="overflow-x-auto">
             <table className="w-full text-sm min-w-[560px]">
               <thead>
                 <tr className="border-b border-slate-100 bg-slate-50/50">
+                  {tab === 'PENDING' && (
+                    <th className="px-4 py-3 w-10 text-center">
+                      <input
+                        type="checkbox"
+                        aria-label="전체 선택"
+                        checked={pending.length > 0 && selectedIds.size === pending.length}
+                        onChange={(e) =>
+                          setSelectedIds(
+                            e.target.checked ? new Set(pending.map((p) => p.enrollmentId)) : new Set(),
+                          )
+                        }
+                        className="rounded border-slate-300"
+                      />
+                    </th>
+                  )}
                   <th className="text-left px-5 py-3 text-xs font-semibold text-slate-500">학생</th>
                   <th className="text-left px-5 py-3 text-xs font-semibold text-slate-500">이메일</th>
                   <th className="text-center px-5 py-3 text-xs font-semibold text-slate-500">신청일</th>
@@ -159,6 +224,17 @@ export default function Enrollments() {
                   const cfg = statusConfig[e.status] ?? statusConfig.PENDING;
                   return (
                     <tr key={e.enrollmentId} className="border-b border-slate-50 hover:bg-indigo-50/40 transition-colors">
+                      {tab === 'PENDING' && (
+                        <td className="px-4 py-3.5 text-center">
+                          <input
+                            type="checkbox"
+                            aria-label={`${e.studentName} 선택`}
+                            checked={selectedIds.has(e.enrollmentId)}
+                            onChange={() => toggleSelect(e.enrollmentId)}
+                            className="rounded border-slate-300"
+                          />
+                        </td>
+                      )}
                       <td className="px-5 py-3.5">
                         <div className="flex items-center gap-2">
                           <div className="w-7 h-7 rounded-full bg-indigo-100 flex items-center justify-center text-[10px] font-bold text-indigo-700">
@@ -203,6 +279,15 @@ export default function Enrollments() {
           </div>
         )}
       </main>
+
+      <ConfirmModal
+        isOpen={showBulkConfirm}
+        title="일괄 승인"
+        message={`선택한 ${selectedIds.size}명의 수강 신청을 모두 승인하시겠습니까?`}
+        confirmLabel="일괄 승인"
+        onConfirm={handleBulkApprove}
+        onClose={() => setShowBulkConfirm(false)}
+      />
 
       {/* Confirm Modal */}
       {confirm && (

@@ -12,9 +12,9 @@ const variantMap = {
 };
 
 const iconMap = {
-  forgetting: '\⏳',
-  weakness: '\⚠',
-  motivation: '\✨',
+  forgetting: '⏳',
+  weakness: '⚠',
+  motivation: '✨',
   default: '\u{1F3F7}',
 };
 

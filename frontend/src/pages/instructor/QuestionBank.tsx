@@ -41,6 +41,7 @@ export default function QuestionBank() {
   const courseId = useCourseId();
   const [filter, setFilter] = useState<FilterStatus>('ALL');
   const [skillFilter, setSkillFilter] = useState<string>('ALL');
+  const [sort, setSort] = useState<'NEWEST' | 'OLDEST' | 'DIFFICULTY'>('NEWEST');
 
   // 문제 상세 모달
   const [detailQuestion, setDetailQuestion] = useState<Question | null>(null);
@@ -144,11 +145,27 @@ export default function QuestionBank() {
     onError: () => setGenStatus(''),
   });
 
-  const filtered = questions.filter((q) => {
-    if (filter !== 'ALL' && q.approvalStatus !== filter) return false;
-    if (skillFilter !== 'ALL' && q.skillId !== skillFilter) return false;
-    return true;
-  });
+  // 난이도 정렬용: EASY/MEDIUM/HARD와 숫자 문자열('1'~'5') 표기를 모두 지원
+  const diffRank = (d: unknown) => {
+    const s = String(d);
+    if (s === 'EASY') return 1;
+    if (s === 'MEDIUM') return 3;
+    if (s === 'HARD') return 5;
+    const n = Number(s);
+    return Number.isNaN(n) ? 3 : n;
+  };
+
+  const filtered = questions
+    .filter((q) => {
+      if (filter !== 'ALL' && q.approvalStatus !== filter) return false;
+      if (skillFilter !== 'ALL' && q.skillId !== skillFilter) return false;
+      return true;
+    })
+    .sort((a, b) => {
+      if (sort === 'NEWEST') return Number(b.id) - Number(a.id);
+      if (sort === 'OLDEST') return Number(a.id) - Number(b.id);
+      return diffRank(b.difficulty) - diffRank(a.difficulty);
+    });
 
   const counts = {
     ALL: questions.length,
@@ -300,6 +317,16 @@ export default function QuestionBank() {
             {skills.map((s) => (
               <option key={s.id} value={s.id}>{s.name}</option>
             ))}
+          </select>
+
+          <select
+            value={sort}
+            onChange={(e) => setSort(e.target.value as 'NEWEST' | 'OLDEST' | 'DIFFICULTY')}
+            className="px-3 py-2 text-xs border border-slate-300 rounded-xl bg-white focus:outline-none focus:border-indigo-400"
+          >
+            <option value="NEWEST">최신순</option>
+            <option value="OLDEST">오래된순</option>
+            <option value="DIFFICULTY">어려운 순</option>
           </select>
         </div>
 

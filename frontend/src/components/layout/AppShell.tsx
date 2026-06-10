@@ -56,6 +56,8 @@ export default function AppShell({ role }: AppShellProps) {
         const data: Record<string, unknown> =
           typeof raw === 'string' ? JSON.parse(raw) : (raw as Record<string, unknown>);
         handledNotifKey.current = key;
+        // SSE 알림(외부 시스템)에서 들어온 통화 요청을 모달 상태로 동기화한다
+        // eslint-disable-next-line react-hooks/set-state-in-effect
         setIncomingCall({
           consultationId: Number(data.consultationId),
           roomName: String(data.roomName),

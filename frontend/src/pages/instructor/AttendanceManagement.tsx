@@ -1,8 +1,9 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { useNavigate } from 'react-router-dom';
 import { instructorApi } from '../../api/instructor';
 import GlassCard from '../../components/common/GlassCard';
+import { toast } from '../../store/toastStore';
 
 export default function AttendanceManagement() {
   const navigate = useNavigate();
@@ -12,6 +13,7 @@ export default function AttendanceManagement() {
   const [showNewSession, setShowNewSession] = useState(false);
   const [newSessionDate, setNewSessionDate] = useState(new Date().toISOString().slice(0, 10));
   const [newSessionTitle, setNewSessionTitle] = useState('');
+  const [searchName, setSearchName] = useState('');
 
   const { data: courses, isLoading: coursesLoading, isError: coursesError } = useQuery({
     queryKey: ['instructor', 'attendance', 'courses'],
@@ -41,6 +43,7 @@ export default function AttendanceManagement() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['instructor', 'attendance', 'records'] });
       queryClient.invalidateQueries({ queryKey: ['instructor', 'attendance', 'stats'] });
+      toast.success('출결이 저장되었습니다');
     },
   });
 
@@ -55,6 +58,25 @@ export default function AttendanceManagement() {
   });
 
   const [localRecords, setLocalRecords] = useState<Record<string, string>>({});
+  const unsavedCount = Object.keys(localRecords).length;
+
+  // 세션을 바꾸면 이전 세션의 미저장 체크가 새 세션에 저장되지 않도록 렌더 중 초기화
+  const [prevSessionId, setPrevSessionId] = useState(selectedSessionId);
+  if (prevSessionId !== selectedSessionId) {
+    setPrevSessionId(selectedSessionId);
+    setLocalRecords({});
+    setSearchName('');
+  }
+
+  // 저장하지 않은 변경이 있을 때 페이지 이탈 경고
+  useEffect(() => {
+    if (unsavedCount === 0) return;
+    const warn = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+    };
+    window.addEventListener('beforeunload', warn);
+    return () => window.removeEventListener('beforeunload', warn);
+  }, [unsavedCount]);
 
   const handleStatusChange = (studentId: string, status: string) => {
     setLocalRecords((prev) => ({ ...prev, [studentId]: status }));
@@ -150,18 +172,39 @@ export default function AttendanceManagement() {
       {/* 출결 기록 */}
       {selectedSessionId && records && (
         <GlassCard className="p-5">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-sm font-bold text-slate-900">출결 체크</h2>
-            <div className="flex gap-2">
+          <div className="flex items-center justify-between mb-4 gap-3 flex-wrap">
+            <div className="flex items-center gap-2">
+              <h2 className="text-sm font-bold text-slate-900">출결 체크</h2>
+              {unsavedCount > 0 && (
+                <span className="px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 text-[11px] font-bold">
+                  저장 안 됨 {unsavedCount}건
+                </span>
+              )}
+            </div>
+            <div className="flex gap-2 items-center">
+              <input
+                value={searchName}
+                onChange={(e) => setSearchName(e.target.value)}
+                placeholder="학생 이름 검색"
+                className="px-3 py-1.5 rounded-lg border border-slate-200 text-xs w-36 focus:outline-none focus:border-indigo-400"
+              />
               <button
                 onClick={handleMarkAllPresent}
                 className="px-3 py-1.5 rounded-lg bg-emerald-100 text-emerald-700 text-xs font-bold hover:bg-emerald-200 transition-colors"
               >
                 전체 출석
               </button>
+              {unsavedCount > 0 && (
+                <button
+                  onClick={() => setLocalRecords({})}
+                  className="px-3 py-1.5 rounded-lg bg-slate-100 text-slate-600 text-xs font-medium hover:bg-slate-200 transition-colors"
+                >
+                  되돌리기
+                </button>
+              )}
               <button
                 onClick={handleBulkSave}
-                disabled={Object.keys(localRecords).length === 0 || bulkMutation.isPending}
+                disabled={unsavedCount === 0 || bulkMutation.isPending}
                 className="px-4 py-1.5 rounded-lg bg-indigo-600 text-white text-xs font-bold hover:bg-indigo-700 disabled:opacity-50 transition-colors"
               >
                 저장
@@ -170,7 +213,9 @@ export default function AttendanceManagement() {
           </div>
 
           <div className="space-y-2">
-            {records.map((r) => {
+            {records
+              .filter((r) => !searchName || (r.studentName ?? '').includes(searchName.trim()))
+              .map((r) => {
               const currentStatus = localRecords[r.studentId] ?? r.status;
               return (
                 <div key={r.id} className="flex items-center justify-between py-2 border-b border-slate-100 last:border-0">

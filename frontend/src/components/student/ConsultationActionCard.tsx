@@ -6,13 +6,13 @@ import { useCourseId } from '../../hooks/useCourseId';
 import type { Consultation, ActionPlan } from '../../types';
 
 
-function parseActionPlans(json: any): ActionPlan[] {
+function parseActionPlans(json: unknown): ActionPlan[] {
   if (!json) return [];
-  if (Array.isArray(json)) return json;
+  if (Array.isArray(json)) return json as ActionPlan[];
   if (typeof json === 'string') {
     try {
       const parsed = JSON.parse(json);
-      return Array.isArray(parsed) ? parsed : [];
+      return Array.isArray(parsed) ? (parsed as ActionPlan[]) : [];
     } catch {
       return [];
     }

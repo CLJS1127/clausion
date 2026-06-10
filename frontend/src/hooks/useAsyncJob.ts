@@ -94,6 +94,8 @@ export function useAsyncJob(
   // Start/stop polling when jobId or enabled changes
   useEffect(() => {
     if (jobId && enabled) {
+      // 폴링 시작은 타이머(외부 시스템) 셋업이며 내부에서 진행 상태를 초기화한다
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       startPolling();
     } else {
       cleanup();

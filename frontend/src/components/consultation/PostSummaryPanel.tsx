@@ -27,6 +27,8 @@ export default function PostSummaryPanel({ consultationId }: { consultationId?: 
     enabled: !!consultationId,
   });
 
+  // 서버에서 불러온 상담 내용을 편집 폼 상태로 1회 동기화한다 (외부 데이터 초기화)
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     if (!consultation) return;
     if (consultation.summaryText) setSummaryText(consultation.summaryText);
@@ -36,7 +38,7 @@ export default function PostSummaryPanel({ consultationId }: { consultationId?: 
           ? JSON.parse(consultation.actionPlanJson)
           : consultation.actionPlanJson;
         if (Array.isArray(plans) && plans.length > 0) {
-          setActionItems(plans.map((p: any, i: number) => ({
+          setActionItems(plans.map((p: { day?: string; dueDate?: string; task?: string; title?: string; completed?: boolean; status?: string }, i: number) => ({
             id: `a${i}`,
             day: p.day ?? p.dueDate ?? `Day ${i + 1}`,
             task: p.task ?? p.title ?? '',
@@ -46,6 +48,7 @@ export default function PostSummaryPanel({ consultationId }: { consultationId?: 
       } catch { /* ignore parse errors */ }
     }
   }, [consultation]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
   const toggleItem = (id: string) => {
     setActionItems((prev) =>

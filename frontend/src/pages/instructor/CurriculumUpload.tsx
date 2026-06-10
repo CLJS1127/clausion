@@ -85,12 +85,13 @@ export default function CurriculumUpload() {
   const [addForm, setAddForm] = useState({ name: '', description: '', difficulty: 'MEDIUM' });
   const [deleteConfirm, setDeleteConfirm] = useState<CurriculumSkill | null>(null);
 
-  // 과정 목록 로드 시 자동 선택 (선택된 과정이 없을 때만)
-  useEffect(() => {
-    if (!courses || courses.length === 0) return;
-    if (selectedCourseId && courses.some((c) => String(c.id) === selectedCourseId)) return;
+  // 과정 목록 로드 시 자동 선택 (선택된 과정이 없을 때만, 렌더 중 보정)
+  if (
+    courses && courses.length > 0 &&
+    (!selectedCourseId || !courses.some((c) => String(c.id) === selectedCourseId))
+  ) {
     setSelectedCourseId(String(courses[0].id));
-  }, [courses, selectedCourseId]);
+  }
 
   // 과정 변경 핸들러
   const handleCourseChange = (newId: string) => {
@@ -140,7 +141,8 @@ export default function CurriculumUpload() {
     enabled: !!courseId,
   });
 
-  // 스킬 데이터가 로드되면 phase 결정 (useEffect로 이동하여 렌더 중 setState 방지)
+  // 스킬 데이터가 로드되면 phase 결정 — 쿼리 결과(외부 데이터)에 따른 화면 단계 전환
+  /* eslint-disable react-hooks/set-state-in-effect */
   useEffect(() => {
     if (phase !== 'loading') return;
     if (coursesLoading) return;
@@ -168,17 +170,16 @@ export default function CurriculumUpload() {
       setPhase('input');
     }
   }, [phase, coursesLoading, courseId, existingSkills, skillsError]);
+  /* eslint-enable react-hooks/set-state-in-effect */
 
-  // 과정명 자동 채우기 (선택된 과정 기준)
-  useEffect(() => {
-    if (!courseNameInitialized && courses && courseId) {
-      const course = courses.find((c) => String(c.id) === courseId);
-      if (course) {
-        setCourseName(course.title);
-        setCourseNameInitialized(true);
-      }
+  // 과정명 자동 채우기 (선택된 과정 기준, 렌더 중 1회 보정)
+  if (!courseNameInitialized && courses && courseId) {
+    const course = courses.find((c) => String(c.id) === courseId);
+    if (course) {
+      setCourseName(course.title);
+      setCourseNameInitialized(true);
     }
-  }, [courses, courseId, courseNameInitialized]);
+  }
 
   const analyzeMutation = useMutation({
     mutationFn: async () => {

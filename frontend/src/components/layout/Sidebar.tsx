@@ -199,6 +199,8 @@ export default function Sidebar({ role }: SidebarProps) {
   const location = useLocation();
   const sections = navByRole[role] ?? studentNav;
   const rolePrefix = `/${role}`;
+  // 모바일 오버레이로 열렸을 때는 접힘 상태와 무관하게 전체 콘텐츠를 보여준다
+  const effectiveCollapsed = isCollapsed && !isMobileOpen;
 
   const handleNavigate = (path: string) => {
     navigate(path);
@@ -218,12 +220,12 @@ export default function Sidebar({ role }: SidebarProps) {
         className={`h-screen flex flex-col bg-white border-r border-slate-300 transition-all duration-200
           fixed z-50 lg:static
           ${isMobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
-          ${isCollapsed ? 'w-16' : 'w-60'}
+          ${effectiveCollapsed ? 'w-16' : 'w-60'}
         `}
       >
       {/* Header */}
       <div className="flex items-center gap-2 px-4 h-14 border-b border-slate-100 flex-shrink-0">
-        {!isCollapsed && (
+        {!effectiveCollapsed && (
           <div className="flex items-center gap-2 flex-1 min-w-0">
             <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-indigo-600 to-violet-600 flex items-center justify-center">
               <span className="text-white text-xs font-bold">CP</span>
@@ -246,20 +248,20 @@ export default function Sidebar({ role }: SidebarProps) {
       </div>
 
       {/* Course Selector (instructor/student) */}
-      {(role === 'instructor' || role === 'student') && !isCollapsed && <CourseSelector role={role} />}
+      {(role === 'instructor' || role === 'student') && !effectiveCollapsed && <CourseSelector role={role} />}
 
       {/* Navigation */}
       <nav className="flex-1 overflow-y-auto px-2 py-3 space-y-4">
         {sections.map((section) => (
           <div key={section.title}>
-            {!isCollapsed && (
+            {!effectiveCollapsed && (
               <p className="px-3 mb-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-wider">
                 {section.title}
               </p>
             )}
             <div className="space-y-0.5">
               {section.items.map((item) => (
-                isCollapsed ? (
+                effectiveCollapsed ? (
                   (() => {
                     const fullPath = `${rolePrefix}/${item.path}`;
                     const isActive = location.pathname === fullPath || location.pathname === fullPath + '/';
@@ -295,7 +297,7 @@ export default function Sidebar({ role }: SidebarProps) {
       </nav>
 
       {/* Footer */}
-      {!isCollapsed && <UserInfoFooter />}
+      {!effectiveCollapsed && <UserInfoFooter />}
     </aside>
     </>
   );

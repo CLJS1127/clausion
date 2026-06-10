@@ -17,7 +17,7 @@ const roles = [
     border: 'border-violet-100',
   },
   {
-    icon: '\u{1F468}\‍\u{1F3EB}',
+    icon: '\u{1F468}\u{200D}\u{1F3EB}',
     title: '강사',
     subtitle: '데이터 기반 교육 개입',
     features: [
@@ -30,6 +30,21 @@ const roles = [
     gradient: 'from-indigo-500 to-blue-600',
     bg: 'bg-indigo-50',
     border: 'border-indigo-200',
+  },
+  {
+    icon: '\u{1F4CA}',
+    title: '운영자',
+    subtitle: '과정 횡단 운영 관리',
+    features: [
+      '과정 개설 승인·반려 결재',
+      '전체 위험 학생 횡단 모니터링',
+      '강사 효과성 비교 분석',
+      'AI 기반 개입 지시 센터',
+      '주간 운영 리포트 자동 생성',
+    ],
+    gradient: 'from-slate-600 to-slate-800',
+    bg: 'bg-slate-50',
+    border: 'border-slate-200',
   },
 ];
 
@@ -49,11 +64,11 @@ export default function RoleValueCards() {
             역할별 핵심 가치
           </h2>
           <p className="text-slate-500 mt-3 max-w-xl mx-auto">
-            학생과 강사 모두에게 최적화된 경험을 제공합니다.
+            학생, 강사, 운영자 모두에게 최적화된 경험을 제공합니다.
           </p>
         </motion.div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-4xl mx-auto">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-6xl mx-auto">
           {roles.map((role, i) => (
             <motion.div
               key={role.title}

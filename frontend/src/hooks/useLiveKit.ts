@@ -3,7 +3,7 @@ import {
   Room,
   RoomEvent,
   Track,
-  RemoteTrackPublication,
+
   RemoteParticipant,
   LocalTrackPublication,
 } from 'livekit-client';
@@ -68,19 +68,6 @@ export function useLiveKit({
     }
   }, []);
 
-  const attachRemoteTrack = useCallback(
-    (publication: RemoteTrackPublication) => {
-      if (!publication.track) return;
-      if (
-        publication.track.kind === Track.Kind.Video &&
-        remoteVideoRef.current
-      ) {
-        publication.track.attach(remoteVideoRef.current);
-      }
-      attachAudioTrack(publication.track);
-    },
-    [attachAudioTrack],
-  );
 
   const connect = useCallback(
     async (preToken?: string, _preRoomName?: string) => {
@@ -207,7 +194,7 @@ export function useLiveKit({
         setIsConnecting(false);
       }
     },
-    [consultationId, role, attachRemoteTrack, attachAudioTrack],
+    [consultationId, role, attachAudioTrack],
   );
 
   const disconnect = useCallback(async () => {

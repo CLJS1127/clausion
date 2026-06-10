@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { motion } from 'framer-motion';
 import { useLocation, useNavigate } from 'react-router-dom';
@@ -98,24 +98,25 @@ const Review: React.FC = () => {
     [tasks],
   );
 
-  useEffect(() => {
-    if (!orderedTasks.length) return;
-    if (selectedTaskId && orderedTasks.some((task) => task.id === selectedTaskId)) {
-      return;
-    }
-
+  // 선택된 과제가 없거나 목록에서 사라졌으면 추천 과제를 렌더 중에 보정 선택한다
+  if (
+    orderedTasks.length > 0 &&
+    (!selectedTaskId || !orderedTasks.some((task) => task.id === selectedTaskId))
+  ) {
     const preferredTask =
       orderedTasks.find((task) => task.id === initialTaskId) ??
       orderedTasks.find((task) => task.status !== 'COMPLETED') ??
       orderedTasks[0];
-
     setSelectedTaskId(preferredTask.id);
-  }, [initialTaskId, orderedTasks, selectedTaskId]);
+  }
 
-  useEffect(() => {
+  // 과제가 바뀌면 답안/채점 결과를 초기화한다 (렌더 중 보정 패턴)
+  const [prevTaskId, setPrevTaskId] = useState(selectedTaskId);
+  if (prevTaskId !== selectedTaskId) {
+    setPrevTaskId(selectedTaskId);
     setAnswerDraft('');
     setEvaluation(null);
-  }, [selectedTaskId]);
+  }
 
   const selectedTask = useMemo(
     () => orderedTasks.find((task) => task.id === selectedTaskId) ?? null,

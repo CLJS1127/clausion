@@ -605,7 +605,7 @@ export default function Consultations() {
 
             {selectedConsultation.actionPlanJson && (() => {
               const raw = selectedConsultation.actionPlanJson;
-              const plans: any[] = Array.isArray(raw)
+              const plans: { day?: string; dueDate?: string; task?: string; title?: string }[] = Array.isArray(raw)
                 ? raw
                 : typeof raw === 'string'
                   ? (() => { try { return JSON.parse(raw); } catch { return []; } })()
@@ -615,7 +615,7 @@ export default function Consultations() {
                 <div className="p-4 rounded-xl bg-indigo-50 border border-indigo-200">
                   <h4 className="text-xs font-semibold text-indigo-700 uppercase tracking-wider mb-2">액션플랜</h4>
                   <ul className="space-y-1.5">
-                    {plans.map((p: any, i: number) => (
+                    {plans.map((p, i) => (
                       <li key={i} className="flex items-start gap-2 text-sm text-slate-700">
                         <span className="text-xs font-semibold text-indigo-600 w-12 flex-shrink-0">{p.day ?? p.dueDate ?? `Day ${i + 1}`}</span>
                         {p.task ?? p.title ?? ''}

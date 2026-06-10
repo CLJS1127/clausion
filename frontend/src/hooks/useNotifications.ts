@@ -55,7 +55,7 @@ export function useNotifications(): UseNotificationsReturn {
     }
   }, [hydrateNotifications]);
 
-  const connect = useCallback(() => {
+  const connect = useCallback(function connectSse() {
     const token = localStorage.getItem('token');
     if (!token) return; // 토큰 없으면 연결하지 않음
 
@@ -119,7 +119,7 @@ export function useNotifications(): UseNotificationsReturn {
       retriesRef.current += 1;
 
       reconnectTimeoutRef.current = setTimeout(() => {
-        connect();
+        connectSse();
       }, delay);
     };
   }, [hydrateNotifications, prependNotification]);
