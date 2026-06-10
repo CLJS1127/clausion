@@ -1,73 +1,37 @@
-# React + TypeScript + Vite
+# Clausion Frontend
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+React 19 + TypeScript + Vite 기반 SPA. 전체 프로젝트 개요는 [루트 README](../README.md) 참고.
 
-Currently, two official plugins are available:
+## 실행
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
-
-## React Compiler
-
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend updating the configuration to enable type-aware lint rules:
-
-```js
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-
-      // Remove tseslint.configs.recommended and replace with this
-      tseslint.configs.recommendedTypeChecked,
-      // Alternatively, use this for stricter rules
-      tseslint.configs.strictTypeChecked,
-      // Optionally, add this for stylistic rules
-      tseslint.configs.stylisticTypeChecked,
-
-      // Other configs...
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```bash
+npm install
+npm run dev    # https://localhost:5173 (자체 서명 인증서)
 ```
 
-You can also install [eslint-plugin-react-x](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-x) and [eslint-plugin-react-dom](https://github.com/Rel1cx/eslint-react/tree/main/packages/plugins/eslint-plugin-react-dom) for React-specific lint rules:
+`/api`, `/ws-chat` 요청은 vite proxy가 백엔드(`http://localhost:8080`)로 전달합니다.
+프록시 대상 변경: `VITE_PROXY_TARGET` 환경변수.
 
-```js
-// eslint.config.js
-import reactX from 'eslint-plugin-react-x'
-import reactDom from 'eslint-plugin-react-dom'
+## 구조
 
-export default defineConfig([
-  globalIgnores(['dist']),
-  {
-    files: ['**/*.{ts,tsx}'],
-    extends: [
-      // Other configs...
-      // Enable lint rules for React
-      reactX.configs['recommended-typescript'],
-      // Enable lint rules for React DOM
-      reactDom.configs.recommended,
-    ],
-    languageOptions: {
-      parserOptions: {
-        project: ['./tsconfig.node.json', './tsconfig.app.json'],
-        tsconfigRootDir: import.meta.dirname,
-      },
-      // other options...
-    },
-  },
-])
+```
+src/
+├── pages/       # 라우트 단위 페이지 — student / instructor / operator
+├── components/  # 도메인별 컴포넌트 (student, instructor, consultation, chatbot, common, layout)
+├── api/         # fetch 기반 API 클라이언트 (1 파일 = 1 도메인, Bearer 토큰 자동 주입)
+├── store/       # Zustand — authStore(localStorage 영속), courseStore, sidebarStore, chatbotStore
+├── hooks/       # useLiveKit(WebRTC), useAsyncJob(작업 폴링), useStudentTwin 등
+└── types/       # 도메인 타입 정의
+```
+
+## 상태 관리 원칙
+
+- **서버 상태**: TanStack Query (`queryKey`에 courseId 포함 → 과정 전환 시 자동 캐시 무효화)
+- **클라이언트 상태**: Zustand 스토어 4개만 사용
+
+## 빌드/품질
+
+```bash
+npm run build    # tsc -b && vite build
+npm run lint     # ESLint
 ```
