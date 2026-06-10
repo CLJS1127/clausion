@@ -20,7 +20,6 @@ import org.springframework.web.client.RestTemplate;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
-import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -40,8 +39,6 @@ public class TwinInferenceEngine {
     private final TwinDataCollector dataCollector;
     private final TwinScoreHistoryRepository scoreHistoryRepository;
     private final ObjectMapper objectMapper;
-
-    private static final double MAX_SCORE_DELTA = 25.0;
 
     public TwinInferenceEngine(
             @Qualifier("openAiRestTemplate") RestTemplate openAiRestTemplate,
@@ -159,57 +156,13 @@ public class TwinInferenceEngine {
         // ── Collect all data sources ────────────────────────────────────
         TwinInferenceContext ctx = dataCollector.collect(studentId, courseId);
 
-        // ── Rule-based score calculation ────────────────────────────────
-
-        // Mastery: confidence + review rate + code quality + skill understanding
-        double avgSkillUnderstanding = ctx.latestSkillSnapshots().stream()
-                .mapToDouble(s -> s.getUnderstandingScore().doubleValue())
-                .average().orElse(50.0);
-        double masteryScore = (ctx.avgConfidence() / 5.0) * 30.0
-                + ctx.reviewCompletionRate() * 25.0
-                + ctx.codeAnalysis().goodRate() * 25.0
-                + avgSkillUnderstanding * 0.20;
-
-        // Execution: review rate + code submission frequency + skill practice + chat engagement
-        double codeSubmissionFreq = Math.min(100.0, ctx.codeAnalysis().totalSubmissions() * 10.0);
-        double chatEngagementScore = Math.min(100.0, ctx.chatEngagement().totalUserMessages() * 5.0);
-        double avgSkillPractice = ctx.latestSkillSnapshots().stream()
-                .mapToDouble(s -> s.getPracticeScore().doubleValue())
-                .average().orElse(50.0);
-        double executionScore = ctx.reviewCompletionRate() * 35.0
-                + codeSubmissionFreq * 0.25
-                + avgSkillPractice * 0.20
-                + chatEngagementScore * 0.20;
-
-        // Motivation: confidence + activity + streak + XP velocity
-        double activityScore = Math.min(100.0, ctx.recentReflections().size() * 10.0);
-        double streakScore = Math.min(25.0, ctx.gamification().streakDays() * 3.0);
-        double xpVelocityScore = Math.min(25.0, ctx.gamification().weeklyXp() / 4.0);
-        double motivationScore = (ctx.avgConfidence() / 5.0) * 25.0
-                + activityScore * 0.25
-                + streakScore
-                + xpVelocityScore;
-
-        // Retention risk: penalize low review, stuck points, low code quality, inactivity
-        long daysSinceLastActivity = ctx.gamification().lastActivityDate() != null
-                ? ChronoUnit.DAYS.between(ctx.gamification().lastActivityDate(), LocalDate.now())
-                : 30;
-        double activityProximityBonus = daysSinceLastActivity < 3 ? 15.0 : daysSinceLastActivity < 7 ? 7.0 : 0.0;
-        double streakBonus = ctx.gamification().streakDays() > 0 ? 10.0 : 0.0;
-        double retentionRisk = Math.max(0, 100.0
-                - ctx.reviewCompletionRate() * 30.0
-                - (5 - ctx.stuckCount()) * 6.0
-                - ctx.codeAnalysis().goodRate() * 20.0
-                - activityProximityBonus
-                - streakBonus);
-
-        // Consultation need
-        double consultationNeed = ctx.stuckCount() * 15.0
-                + (5.0 - ctx.avgConfidence()) * 10.0
-                + (ctx.hasRecentConsultation() ? 0.0 : 15.0)
-                + (ctx.codeAnalysis().goodRate() < 0.4 ? 10.0 : 0.0)
-                + (motivationScore < 30 ? 5.0 : 0.0);
-        consultationNeed = Math.min(100.0, Math.max(0.0, consultationNeed));
+        // ── Rule-based score calculation (순수 로직: TwinRuleCalculator) ──
+        TwinRuleCalculator.RuleScores rule = TwinRuleCalculator.calculate(ctx, LocalDate.now());
+        double masteryScore = rule.mastery();
+        double executionScore = rule.execution();
+        double motivationScore = rule.motivation();
+        double retentionRisk = rule.retentionRisk();
+        double consultationNeed = rule.consultationNeed();
 
         // ── Build LLM prompt ────────────────────────────────────────────
 
@@ -231,8 +184,7 @@ public class TwinInferenceEngine {
         double finalRetention = clamp(retentionRisk + toDouble(adjustments.get("retention_risk_adjustment")));
         double finalMotivation = clamp(motivationScore + toDouble(adjustments.get("motivation_adjustment")));
         double finalConsultation = clamp(consultationNeed + toDouble(adjustments.get("consultation_need_adjustment")));
-        double overallRisk = (finalRetention * 0.3 + (100 - finalMotivation) * 0.2
-                + finalConsultation * 0.2 + (100 - finalMastery) * 0.3);
+        double overallRisk = TwinRuleCalculator.overallRisk(finalMastery, finalMotivation, finalRetention, finalConsultation);
 
         // ── Anomaly detection: cap large score swings ───────────────────
 
@@ -242,8 +194,7 @@ public class TwinInferenceEngine {
             finalRetention = capDelta(ctx.previousTwin().getRetentionRiskScore().doubleValue(), finalRetention);
             finalMotivation = capDelta(ctx.previousTwin().getMotivationScore().doubleValue(), finalMotivation);
             finalConsultation = capDelta(ctx.previousTwin().getConsultationNeedScore().doubleValue(), finalConsultation);
-            overallRisk = (finalRetention * 0.3 + (100 - finalMotivation) * 0.2
-                    + finalConsultation * 0.2 + (100 - finalMastery) * 0.3);
+            overallRisk = TwinRuleCalculator.overallRisk(finalMastery, finalMotivation, finalRetention, finalConsultation);
         }
 
         String aiInsight = (String) gptResponse.getOrDefault("ai_insight", "분석 결과를 생성할 수 없습니다.");
@@ -524,16 +475,11 @@ public class TwinInferenceEngine {
     // ── Helpers ──────────────────────────────────────────────────────────
 
     private double capDelta(double previous, double current) {
-        double delta = current - previous;
-        if (Math.abs(delta) > MAX_SCORE_DELTA) {
-            log.warn("Score delta capped: previous={}, current={}, delta={}", previous, current, delta);
-            return clamp(previous + Math.signum(delta) * MAX_SCORE_DELTA);
-        }
-        return current;
+        return TwinRuleCalculator.capDelta(previous, current);
     }
 
     private double clamp(double value) {
-        return Math.min(100.0, Math.max(0.0, value));
+        return TwinRuleCalculator.clamp(value);
     }
 
     private double toDouble(Object value) {
