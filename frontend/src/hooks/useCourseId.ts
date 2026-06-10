@@ -4,6 +4,13 @@ import { useCourseStore } from '../store/courseStore';
 import type { Course } from '../types';
 import { useAuthStore } from '../store/authStore';
 
+export interface MyEnrollment {
+  enrollmentId: number;
+  courseId: number;
+  studentId: number;
+  status: string;
+}
+
 export function useCourses() {
   return useQuery<Course[]>({
     queryKey: ['courses'],
@@ -12,22 +19,33 @@ export function useCourses() {
   });
 }
 
-export function useCourseId(): string | undefined {
+export function useMyEnrollments() {
   const role = useAuthStore((state) => state.user?.role);
-  const { data: courses } = useCourses();
-  const { data: enrollments = [] } = useQuery<
-    { enrollmentId: number; courseId: number; studentId: number; status: string }[]
-  >({
+  return useQuery<MyEnrollment[]>({
     queryKey: ['my-enrollments'],
     queryFn: () => coursesApi.getMyEnrollments(),
     enabled: role === 'STUDENT',
     staleTime: 5 * 60 * 1000,
   });
+}
+
+export function useCourseId(): string | undefined {
+  const role = useAuthStore((state) => state.user?.role);
+  const { data: courses } = useCourses();
+  const { data: enrollments = [] } = useMyEnrollments();
   const { selectedCourseId, setSelectedCourseId } = useCourseStore();
 
   if (role === 'STUDENT') {
-    const activeEnrollment = enrollments.find((enrollment) => enrollment.status === 'ACTIVE');
-    return activeEnrollment?.courseId?.toString();
+    // 승인(ACTIVE)된 수강 과정만 대상으로 한다
+    const activeCourseIds = enrollments
+      .filter((enrollment) => enrollment.status === 'ACTIVE')
+      .map((enrollment) => enrollment.courseId.toString());
+
+    // 사이드바에서 선택한 과정이 유효하면 그대로 사용
+    if (selectedCourseId && activeCourseIds.includes(selectedCourseId)) {
+      return selectedCourseId;
+    }
+    return activeCourseIds[0];
   }
 
   // If a course is explicitly selected and it still exists in the list, use it

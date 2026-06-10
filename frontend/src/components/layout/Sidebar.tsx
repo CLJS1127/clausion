@@ -2,7 +2,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import SidebarNavItem from './SidebarNavItem';
 import UserInfoFooter from './UserInfoFooter';
 import { useSidebarStore } from '../../store/sidebarStore';
-import { useCourses } from '../../hooks/useCourseId';
+import { useCourses, useMyEnrollments } from '../../hooks/useCourseId';
 import { useCourseStore } from '../../store/courseStore';
 
 interface SidebarProps {
@@ -145,13 +145,25 @@ const navByRole: Record<string, NavSection[]> = {
   operator: operatorNav,
 };
 
-function CourseSelector() {
+function CourseSelector({ role }: { role: string }) {
   const { data: courses = [] } = useCourses();
+  const { data: enrollments = [] } = useMyEnrollments();
   const { selectedCourseId, setSelectedCourseId } = useCourseStore();
 
-  if (courses.length === 0) return null;
+  // 학생은 전체 카탈로그가 아니라 승인(ACTIVE)된 수강 과정만 노출한다
+  const visibleCourses =
+    role === 'student'
+      ? courses.filter((c) =>
+          enrollments.some((e) => e.status === 'ACTIVE' && String(e.courseId) === String(c.id)),
+        )
+      : courses;
 
-  const current = selectedCourseId ?? courses[0]?.id?.toString();
+  if (visibleCourses.length === 0) return null;
+
+  const current =
+    selectedCourseId && visibleCourses.some((c) => String(c.id) === selectedCourseId)
+      ? selectedCourseId
+      : visibleCourses[0]?.id?.toString();
 
   return (
     <div className="px-3 py-2 border-b border-slate-100">
@@ -161,9 +173,9 @@ function CourseSelector() {
         onChange={(e) => setSelectedCourseId(e.target.value)}
         className="w-full px-2.5 py-1.5 text-xs font-medium text-slate-700 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:border-indigo-400 truncate"
       >
-        {courses.map((c) => (
+        {visibleCourses.map((c) => (
           <option key={c.id} value={String(c.id)}>
-            {c.title}{c.enrollmentCount != null ? ` (${c.enrollmentCount}명)` : ''}
+            {c.title}{role !== 'student' && c.enrollmentCount != null ? ` (${c.enrollmentCount}명)` : ''}
           </option>
         ))}
       </select>
@@ -224,7 +236,7 @@ export default function Sidebar({ role }: SidebarProps) {
       </div>
 
       {/* Course Selector (instructor/student) */}
-      {(role === 'instructor' || role === 'student') && !isCollapsed && <CourseSelector />}
+      {(role === 'instructor' || role === 'student') && !isCollapsed && <CourseSelector role={role} />}
 
       {/* Navigation */}
       <nav className="flex-1 overflow-y-auto px-2 py-3 space-y-4">
