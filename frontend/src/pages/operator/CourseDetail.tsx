@@ -132,6 +132,16 @@ export default function CourseDetail() {
             </div>
           )}
           <div>
+            <p className="text-xs text-slate-400 font-medium">수강 기간</p>
+            <p className="text-sm text-slate-700 mt-0.5">
+              {course.startDate && course.endDate
+                ? `${course.startDate} ~ ${course.endDate}`
+                : course.startDate
+                ? `${course.startDate} ~ 미정`
+                : '미정'}
+            </p>
+          </div>
+          <div>
             <p className="text-xs text-slate-400 font-medium">최대 정원</p>
             <p className="text-sm text-slate-700 mt-0.5">{course.maxCapacity ?? 30}명</p>
           </div>
@@ -140,8 +150,8 @@ export default function CourseDetail() {
             <p className="text-sm text-slate-700 mt-0.5">{course.createdAt?.slice(0, 10)}</p>
           </div>
           <div>
-            <p className="text-xs text-slate-400 font-medium">개설자 ID</p>
-            <p className="text-sm text-slate-700 mt-0.5">{course.createdBy}</p>
+            <p className="text-xs text-slate-400 font-medium">개설 강사</p>
+            <p className="text-sm text-slate-700 mt-0.5">{course.createdBy ?? '-'}</p>
           </div>
           {course.approvalNote && (
             <div className="col-span-2 sm:col-span-3">

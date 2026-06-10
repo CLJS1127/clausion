@@ -210,7 +210,7 @@ export default function CourseEnroll() {
                   </div>
                 </div>
 
-                <div className="shrink-0" onClick={(e) => e.stopPropagation()}>
+                <div className="shrink-0 flex flex-col items-end gap-1.5" onClick={(e) => e.stopPropagation()}>
                   {!status && course.maxCapacity && (course.enrollmentCount ?? 0) >= course.maxCapacity ? (
                     <span className="px-4 py-2 text-xs font-medium rounded-lg bg-slate-100 text-slate-400 border border-slate-200">
                       마감
@@ -237,6 +237,11 @@ export default function CourseEnroll() {
                     <span className="px-4 py-2 text-xs font-medium rounded-lg bg-rose-50 text-rose-500 border border-rose-200">
                       거절됨
                     </span>
+                  )}
+                  {course.startDate && (
+                    <p className="text-[10px] text-slate-400 whitespace-nowrap">
+                      {course.startDate} ~ {course.endDate ?? '미정'}
+                    </p>
                   )}
                 </div>
               </div>

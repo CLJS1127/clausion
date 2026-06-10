@@ -39,6 +39,8 @@ public class OperatorCourseController {
             m.put("approvalNote", c.getApprovalNote());
             m.put("maxCapacity", c.getMaxCapacity() != null ? c.getMaxCapacity() : 30);
             m.put("schedule", c.getSchedule());
+            m.put("startDate", c.getStartDate() != null ? c.getStartDate().toString() : null);
+            m.put("endDate", c.getEndDate() != null ? c.getEndDate().toString() : null);
             m.put("createdBy", c.getCreatedBy() != null ? c.getCreatedBy().getName() : null);
             m.put("createdAt", c.getCreatedAt() != null ? c.getCreatedAt().toString() : null);
             return m;
@@ -59,6 +61,11 @@ public class OperatorCourseController {
         m.put("approvalStatus", c.getApprovalStatus());
         m.put("approvalNote", c.getApprovalNote());
         m.put("maxCapacity", c.getMaxCapacity());
+        m.put("schedule", c.getSchedule());
+        m.put("classTime", c.getClassTime());
+        m.put("startDate", c.getStartDate() != null ? c.getStartDate().toString() : null);
+        m.put("endDate", c.getEndDate() != null ? c.getEndDate().toString() : null);
+        m.put("createdBy", c.getCreatedBy() != null ? c.getCreatedBy().getName() : null);
         m.put("createdAt", c.getCreatedAt() != null ? c.getCreatedAt().toString() : null);
         return ResponseEntity.ok(m);
     }
