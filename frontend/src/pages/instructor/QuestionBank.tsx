@@ -8,6 +8,7 @@ import { useCourseId } from '../../hooks/useCourseId';
 import type { Question } from '../../types';
 import TagChip from '../../components/common/TagChip';
 import Modal from '../../components/common/Modal';
+import { toast } from '../../store/toastStore';
 
 type FilterStatus = 'ALL' | Question['approvalStatus'];
 
@@ -83,7 +84,10 @@ export default function QuestionBank() {
       if (status === 'APPROVED') return questionsApi.approveQuestion(id);
       return questionsApi.rejectQuestion(id);
     },
-    onSuccess: invalidateQuestions,
+    onSuccess: (_data, { status }) => {
+      invalidateQuestions();
+      toast.success(status === 'APPROVED' ? '문제가 승인되었습니다' : '문제가 반려되었습니다');
+    },
   });
 
   const updateMutation = useMutation({
@@ -599,7 +603,7 @@ export default function QuestionBank() {
                 <p className="text-xs text-amber-700 mb-2">등록된 스킬이 없습니다. 기본 코딩 스킬을 추가하세요.</p>
                 <button
                   onClick={() => {
-                    if (!courseId) { alert('과정을 먼저 생성하세요.'); return; }
+                    if (!courseId) { toast.error('과정을 먼저 선택하세요.'); return; }
                     coursesApi.createDefaultSkills(courseId).then(() => {
                       queryClient.invalidateQueries({ queryKey: ['courses', courseId, 'skills'] });
                     });

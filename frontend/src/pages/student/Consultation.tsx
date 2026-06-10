@@ -5,6 +5,7 @@ import ConsultationActionCard from '../../components/student/ConsultationActionC
 import { consultationsApi } from '../../api/consultations';
 import { coursesApi } from '../../api/courses';
 import type { Consultation, ActionPlan, Course } from '../../types';
+import { toast } from '../../store/toastStore';
 
 const PLAN_STATUS_STYLES: Record<
   string,
@@ -85,6 +86,7 @@ const ConsultationPage: React.FC = () => {
       queryClient.invalidateQueries({ queryKey: ['consultations'] });
       setShowRequestForm(false);
       setRequestReason('');
+      toast.success('상담이 요청되었습니다', '강사가 수락하면 알림으로 알려드립니다.');
     },
   });
 

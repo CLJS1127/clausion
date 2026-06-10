@@ -7,6 +7,7 @@ import { api } from '../../api/client';
 import { useAuthStore } from '../../store/authStore';
 import { useCourseId } from '../../hooks/useCourseId';
 import TagChip from '../common/TagChip';
+import { toast } from '../../store/toastStore';
 
 interface RiskStudent {
   id: string;
@@ -106,7 +107,7 @@ export default function RiskAlertBanner() {
                     await api.post(`/api/consultations/${consultation.id}/start-video`);
                     navigate(`/instructor/consultation/${consultation.id}/video`);
                   } catch {
-                    alert('즉시 연락을 시작할 수 없습니다.');
+                    toast.error('즉시 연락을 시작할 수 없습니다.');
                     setCallingStudentId(null);
                   }
                 }}

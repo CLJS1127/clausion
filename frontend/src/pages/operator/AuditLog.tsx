@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { operatorApi } from '../../api/operator';
 import GlassCard from '../../components/common/GlassCard';
+import { formatDateTime } from '../../utils/dateFormat';
 
 const actionLabels: Record<string, string> = {
   COURSE_APPROVE: '과정 승인',
@@ -55,7 +56,7 @@ export default function AuditLog() {
               <tbody>
                 {data?.content?.map((log) => (
                   <tr key={log.id} className="border-b border-slate-100 hover:bg-slate-50">
-                    <td className="p-4 text-slate-500 whitespace-nowrap">{log.createdAt?.slice(0, 16).replace('T', ' ')}</td>
+                    <td className="p-4 text-slate-500 whitespace-nowrap">{formatDateTime(log.createdAt)}</td>
                     <td className="p-4">
                       <span className="px-2 py-0.5 rounded-full bg-indigo-100 text-indigo-700 text-xs font-bold">
                         {actionLabels[log.actionType] ?? log.actionType}

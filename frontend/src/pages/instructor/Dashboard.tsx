@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import RiskAlertBanner from '../../components/instructor/RiskAlertBanner';
 import RiskHeatmap from '../../components/instructor/RiskHeatmap';
@@ -11,6 +12,7 @@ import { useCourseId, useCourses } from '../../hooks/useCourseId';
 import { instructorApi } from '../../api/instructor';
 
 export default function InstructorDashboard() {
+  const navigate = useNavigate();
   const { user } = useAuthStore();
   const courseId = useCourseId();
   const { data: courses } = useCourses();
@@ -110,24 +112,68 @@ export default function InstructorDashboard() {
 
       {/* Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6 space-y-6">
-        {/* Risk Alert Banner */}
-        <RiskAlertBanner />
-
-        {/* Row 1: Heatmap + Upcoming Consultations */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-          <div className="lg:col-span-2">
-            <RiskHeatmap />
+        {/* 과정이 없는 신규 강사 안내 */}
+        {courses && courses.length === 0 ? (
+          <div className="bg-white/85 backdrop-blur border border-slate-200 rounded-2xl p-10 text-center">
+            <p className="text-3xl mb-3">🚀</p>
+            <h2 className="text-base font-bold text-slate-800">아직 개설한 과정이 없습니다</h2>
+            <p className="text-sm text-slate-500 mt-1">
+              첫 과정을 만들고 커리큘럼을 업로드하면 AI가 스킬을 분석해드립니다.
+              <br />과정은 운영자 승인 후 학생에게 공개됩니다.
+            </p>
+            <button
+              onClick={() => navigate('/instructor/courses/new')}
+              className="mt-5 px-5 py-2.5 rounded-lg bg-indigo-600 text-white text-sm font-medium hover:bg-indigo-700 transition-colors"
+            >
+              첫 과정 만들기
+            </button>
           </div>
-          <div>
-            <UpcomingConsultationPanel />
-          </div>
-        </div>
+        ) : (
+          <>
+            {/* 과정 승인 상태 배너 */}
+            {currentCourse?.approvalStatus === 'PENDING' && (
+              <div className="flex items-start gap-3 px-4 py-3 rounded-xl bg-amber-50 border border-amber-200">
+                <span className="text-base leading-none mt-0.5">⏳</span>
+                <div>
+                  <p className="text-sm font-semibold text-amber-800">이 과정은 운영자 승인 대기 중입니다</p>
+                  <p className="text-xs text-amber-700 mt-0.5">
+                    승인이 완료되면 학생에게 공개되어 수강 신청을 받을 수 있습니다. 그동안 커리큘럼과 문제 은행을 미리 준비해보세요.
+                  </p>
+                </div>
+              </div>
+            )}
+            {currentCourse?.approvalStatus === 'REJECTED' && (
+              <div className="flex items-start gap-3 px-4 py-3 rounded-xl bg-rose-50 border border-rose-200">
+                <span className="text-base leading-none mt-0.5">⚠️</span>
+                <div>
+                  <p className="text-sm font-semibold text-rose-800">이 과정은 반려되었습니다</p>
+                  <p className="text-xs text-rose-700 mt-0.5">
+                    {currentCourse.approvalNote ? `반려 사유: ${currentCourse.approvalNote}` : '운영자에게 반려 사유를 문의해주세요.'}
+                  </p>
+                </div>
+              </div>
+            )}
 
-        {/* Row 2: Question Review + Course Progress */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-          <QuestionReviewPanel />
-          <CourseProgressChart />
-        </div>
+            {/* Risk Alert Banner */}
+            <RiskAlertBanner />
+
+            {/* Row 1: Heatmap + Upcoming Consultations */}
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+              <div className="lg:col-span-2">
+                <RiskHeatmap />
+              </div>
+              <div>
+                <UpcomingConsultationPanel />
+              </div>
+            </div>
+
+            {/* Row 2: Question Review + Course Progress */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+              <QuestionReviewPanel />
+              <CourseProgressChart />
+            </div>
+          </>
+        )}
       </main>
     </div>
   );

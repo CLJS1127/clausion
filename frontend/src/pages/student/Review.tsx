@@ -262,21 +262,21 @@ const Review: React.FC = () => {
         <div className="grid gap-4 md:grid-cols-3">
           <div className="rounded-2xl border border-slate-100 bg-white p-5 shadow-sm">
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
-              Active
+              오늘의 과제
             </p>
             <p className="mt-2 text-3xl font-bold text-slate-900">{activeCount}</p>
             <p className="mt-1 text-sm text-slate-500">오늘 바로 풀어야 할 복습 과제</p>
           </div>
           <div className="rounded-2xl border border-slate-100 bg-white p-5 shadow-sm">
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
-              Done
+              완료
             </p>
             <p className="mt-2 text-3xl font-bold text-emerald-600">{completedCount}</p>
             <p className="mt-1 text-sm text-slate-500">오늘 완료한 복습 수</p>
           </div>
           <div className="rounded-2xl border border-slate-100 bg-white p-5 shadow-sm">
             <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
-              Coach
+              AI 코치
             </p>
             <p className="mt-2 text-lg font-bold text-slate-900">
               {practiceQuestion
@@ -380,10 +380,10 @@ const Review: React.FC = () => {
 
                 <div className="rounded-2xl bg-slate-50 px-4 py-3 text-right">
                   <p className="text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
-                    Difficulty
+                    난이도
                   </p>
                   <p className="mt-1 text-sm font-semibold text-slate-900">
-                    {practiceQuestion?.difficulty ?? 'MEDIUM'}
+                    {({ EASY: '쉬움', MEDIUM: '보통', HARD: '어려움' } as Record<string, string>)[practiceQuestion?.difficulty ?? 'MEDIUM'] ?? practiceQuestion?.difficulty}
                   </p>
                   <p className="mt-1 text-xs text-slate-500">예상 풀이 시간 10~15분</p>
                 </div>

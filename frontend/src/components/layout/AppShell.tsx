@@ -5,6 +5,7 @@ import Sidebar from './Sidebar';
 import IncomingCallModal from '../consultation/IncomingCallModal';
 import { useNotifications } from '../../hooks/useNotifications';
 import { useSidebarStore } from '../../store/sidebarStore';
+import { useToastStore } from '../../store/toastStore';
 import { api } from '../../api/client';
 
 interface AppShellProps {
@@ -18,17 +19,19 @@ interface CallInfo {
   courseName?: string;
 }
 
-interface ToastInfo {
-  id: string;
-  title: string;
-  message: string;
-}
+const TOAST_STYLE = {
+  info: { border: 'border-indigo-200', iconBg: 'bg-indigo-100', icon: 'text-indigo-600' },
+  success: { border: 'border-emerald-200', iconBg: 'bg-emerald-100', icon: 'text-emerald-600' },
+  error: { border: 'border-rose-200', iconBg: 'bg-rose-100', icon: 'text-rose-600' },
+} as const;
 
 export default function AppShell({ role }: AppShellProps) {
   const navigate = useNavigate();
   const { notifications, markAsRead } = useNotifications();
   const [incomingCall, setIncomingCall] = useState<CallInfo | null>(null);
-  const [toasts, setToasts] = useState<ToastInfo[]>([]);
+  const toasts = useToastStore((s) => s.toasts);
+  const pushToast = useToastStore((s) => s.push);
+  const dismissToastById = useToastStore((s) => s.dismiss);
   const handledNotifKey = useRef<string | null>(null);
   const handledToastKeys = useRef<Set<string>>(new Set());
   const initialLoadRef = useRef(true);
@@ -90,25 +93,15 @@ export default function AppShell({ role }: AppShellProps) {
     if (handledToastKeys.current.has(key)) return;
     handledToastKeys.current.add(key);
 
-    const toast: ToastInfo = {
-      id: key,
-      title: latest.title,
-      message: latest.message,
-    };
-    setToasts((prev) => [toast, ...prev]);
-
-    // Auto-dismiss after 6 seconds
-    setTimeout(() => {
-      setToasts((prev) => prev.filter((t) => t.id !== key));
-    }, 6000);
-  }, [notifications]);
+    pushToast({ id: key, title: latest.title, message: latest.message, variant: 'info' });
+  }, [notifications, pushToast]);
 
   const dismissToast = useCallback((id: string) => {
-    setToasts((prev) => prev.filter((t) => t.id !== id));
+    dismissToastById(id);
     if (/^\d+$/.test(id)) {
       markAsRead(id);
     }
-  }, [markAsRead]);
+  }, [dismissToastById, markAsRead]);
 
   const handleAccept = useCallback(() => {
     if (!incomingCall) return;
@@ -157,7 +150,9 @@ export default function AppShell({ role }: AppShellProps) {
       )}
 
       <AnimatePresence>
-        {toasts.map((toast, i) => (
+        {toasts.map((toast, i) => {
+          const style = TOAST_STYLE[toast.variant];
+          return (
           <motion.div
             key={toast.id}
             initial={{ opacity: 0, y: -30, x: 20 }}
@@ -166,18 +161,29 @@ export default function AppShell({ role }: AppShellProps) {
             className="fixed z-[100] right-6"
             style={{ top: `${24 + i * 88}px` }}
           >
-            <div className="flex items-start gap-3 bg-white border border-indigo-200 shadow-lg rounded-xl px-4 py-3 w-80">
-              <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center flex-shrink-0 mt-0.5">
-                <svg className="w-4 h-4 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                </svg>
+            <div className={`flex items-start gap-3 bg-white border ${style.border} shadow-lg rounded-xl px-4 py-3 w-80`}>
+              <div className={`w-8 h-8 rounded-full ${style.iconBg} flex items-center justify-center flex-shrink-0 mt-0.5`}>
+                {toast.variant === 'success' ? (
+                  <svg className={`w-4 h-4 ${style.icon}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M5 13l4 4L19 7" />
+                  </svg>
+                ) : toast.variant === 'error' ? (
+                  <svg className={`w-4 h-4 ${style.icon}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 9v3.75m-9.303 3.376c-.866 1.5.217 3.374 1.948 3.374h14.71c1.73 0 2.813-1.874 1.948-3.374L13.949 3.378c-.866-1.5-3.032-1.5-3.898 0L2.697 16.126zM12 15.75h.007v.008H12v-.008z" />
+                  </svg>
+                ) : (
+                  <svg className={`w-4 h-4 ${style.icon}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                )}
               </div>
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-semibold text-slate-800">{toast.title}</p>
-                <p className="text-xs text-slate-500 mt-0.5">{toast.message}</p>
+                {toast.message && <p className="text-xs text-slate-500 mt-0.5">{toast.message}</p>}
               </div>
               <button
                 onClick={() => dismissToast(toast.id)}
+                aria-label="알림 닫기"
                 className="text-slate-400 hover:text-slate-600 flex-shrink-0"
               >
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
@@ -186,7 +192,8 @@ export default function AppShell({ role }: AppShellProps) {
               </button>
             </div>
           </motion.div>
-        ))}
+          );
+        })}
       </AnimatePresence>
     </div>
   );

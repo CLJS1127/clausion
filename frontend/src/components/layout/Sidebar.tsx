@@ -173,11 +173,21 @@ function CourseSelector({ role }: { role: string }) {
         onChange={(e) => setSelectedCourseId(e.target.value)}
         className="w-full px-2.5 py-1.5 text-xs font-medium text-slate-700 bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:border-indigo-400 truncate"
       >
-        {visibleCourses.map((c) => (
-          <option key={c.id} value={String(c.id)}>
-            {c.title}{role !== 'student' && c.enrollmentCount != null ? ` (${c.enrollmentCount}명)` : ''}
-          </option>
-        ))}
+        {visibleCourses.map((c) => {
+          const statusSuffix =
+            role !== 'student' && c.approvalStatus === 'PENDING'
+              ? ' · 승인 대기'
+              : role !== 'student' && c.approvalStatus === 'REJECTED'
+              ? ' · 반려됨'
+              : '';
+          return (
+            <option key={c.id} value={String(c.id)}>
+              {c.title}
+              {role !== 'student' && c.enrollmentCount != null ? ` (${c.enrollmentCount}명)` : ''}
+              {statusSuffix}
+            </option>
+          );
+        })}
       </select>
     </div>
   );

@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { api } from '../../api/client';
 import GlassCard from '../../components/common/GlassCard';
+import { formatDate, formatDateTime } from '../../utils/dateFormat';
 
 interface Announcement {
   id: string;
@@ -65,7 +66,7 @@ export default function InstructorAnnouncements() {
                     <h3 className={`truncate ${a.isRead ? 'text-sm font-semibold text-slate-700' : 'text-sm font-bold text-slate-900'}`}>{a.title}</h3>
                   </div>
                   <div className="flex items-center gap-3 shrink-0 ml-3">
-                    <span className="text-xs text-slate-400">{a.createdAt?.slice(0, 10)}</span>
+                    <span className="text-xs text-slate-400">{formatDate(a.createdAt)}</span>
                     <svg
                       className={`w-4 h-4 text-slate-400 transition-transform ${expandedId === a.id ? 'rotate-180' : ''}`}
                       fill="none"
@@ -83,7 +84,7 @@ export default function InstructorAnnouncements() {
                 <div className="px-5 pb-5 border-t border-slate-100">
                   <p className="text-sm text-slate-700 mt-3 whitespace-pre-wrap">{a.content}</p>
                   <p className="text-xs text-slate-400 mt-4 pt-3 border-t border-slate-50">
-                    {a.createdAt?.slice(0, 16).replace('T', ' ')}
+                    {formatDateTime(a.createdAt)}
                   </p>
                 </div>
               )}

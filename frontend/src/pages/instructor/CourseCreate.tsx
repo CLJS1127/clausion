@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { coursesApi } from '../../api/courses';
+import { toast } from '../../store/toastStore';
 
 export default function CourseCreate() {
   const navigate = useNavigate();
@@ -37,6 +38,7 @@ export default function CourseCreate() {
       }),
     onSuccess: (course) => {
       queryClient.invalidateQueries({ queryKey: ['courses'] });
+      toast.success('과정이 생성되었습니다', '운영자 승인 후 학생에게 공개됩니다. 먼저 커리큘럼을 등록해보세요.');
       navigate(`/instructor/curriculum?courseId=${course.id}`);
     },
   });

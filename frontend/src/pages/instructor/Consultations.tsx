@@ -14,6 +14,7 @@ import LiveNotes from '../../components/consultation/LiveNotes';
 import PostSummaryPanel from '../../components/consultation/PostSummaryPanel';
 import TagChip from '../../components/common/TagChip';
 import Modal from '../../components/common/Modal';
+import { toast } from '../../store/toastStore';
 
 type View = 'list' | 'active';
 
@@ -187,7 +188,7 @@ export default function Consultations() {
         state: { token: result.token, roomName: result.roomName },
       });
     } catch {
-      alert('화상 통화를 시작할 수 없습니다.');
+      toast.error('화상 통화를 시작할 수 없습니다.');
     } finally {
       setStartingCall(null);
     }

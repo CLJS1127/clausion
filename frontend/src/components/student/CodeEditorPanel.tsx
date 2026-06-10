@@ -12,6 +12,7 @@ import { useCodeEditor } from '../../hooks/useCodeEditor';
 import { codeAnalysisApi } from '../../api/codeAnalysis';
 import { pollJob } from '../../api/jobs';
 import { useCourseId } from '../../hooks/useCourseId';
+import { toast } from '../../store/toastStore';
 import CodeAIFeedbackSidebar from './CodeAIFeedbackSidebar';
 
 // ── Line highlight decorations ──────────────────────────────
@@ -214,11 +215,16 @@ const CodeEditorPanel: React.FC<CodeEditorPanelProps> = ({
         // Fetch the actual AI-generated feedbacks
         const feedbacks = await codeAnalysisApi.getFeedback(String(submission.submissionId));
         setFeedbacks(feedbacks);
+        toast.success('AI 분석이 완료되었습니다', '피드백을 확인해보세요.');
       } else {
-        // Job failed
+        toast.error('AI 분석에 실패했습니다', '잠시 후 다시 시도해주세요.');
         console.error('Code analysis job failed:', job.errorMessage);
       }
     } catch (err) {
+      toast.error(
+        'AI 분석이 지연되고 있습니다',
+        '서버 응답이 늦어지고 있어요. 잠시 후 다시 시도해주세요.',
+      );
       console.error('Code analysis error:', err);
     } finally {
       setIsSubmitting(false);
@@ -271,7 +277,7 @@ const CodeEditorPanel: React.FC<CodeEditorPanelProps> = ({
                   d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
                 />
               </svg>
-              분석 중...
+              분석 중... (보통 30초~1분)
             </>
           ) : (
             <>AI 분석 요청</>

@@ -44,7 +44,7 @@ export default function RoleValueCards() {
           transition={{ duration: 0.5 }}
           className="text-center mb-16"
         >
-          <span className="text-sm font-bold text-indigo-600 uppercase tracking-wider">For every role</span>
+          <span className="text-sm font-bold text-indigo-600 uppercase tracking-wider">역할별 맞춤</span>
           <h2 className="text-3xl md:text-4xl font-extrabold text-slate-900 mt-3">
             역할별 핵심 가치
           </h2>

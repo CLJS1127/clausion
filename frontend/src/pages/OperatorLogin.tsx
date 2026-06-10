@@ -135,6 +135,10 @@ export default function OperatorLogin() {
               <div>
                 <label htmlFor="invite-code" className="block text-sm font-medium text-slate-700 mb-1">초대 코드</label>
                 <input id="invite-code" type="text" required value={inviteCode} onChange={(e) => setInviteCode(e.target.value.toUpperCase())} placeholder="8자리 초대 코드" maxLength={8} className="w-full px-4 py-2.5 rounded-lg border border-slate-300 bg-white text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-500/40 focus:border-slate-400 transition-all font-mono tracking-widest text-center" />
+                <p className="text-[11px] text-slate-400 mt-1">
+                  운영자 가입에는 초대 코드(영문+숫자 8자리)가 필요합니다.
+                  기존 운영자의 [초대 코드 관리] 메뉴에서 발급받을 수 있으며, 발급 후 7일간 유효합니다.
+                </p>
               </div>
               <div>
                 <label htmlFor="reg-name" className="block text-sm font-medium text-slate-700 mb-1">이름</label>
@@ -146,7 +150,7 @@ export default function OperatorLogin() {
               </div>
               <div>
                 <label htmlFor="reg-password" className="block text-sm font-medium text-slate-700 mb-1">비밀번호</label>
-                <input id="reg-password" type="password" required value={password} onChange={(e) => setPassword(e.target.value)} placeholder="8자 이상" className="w-full px-4 py-2.5 rounded-lg border border-slate-300 bg-white text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-500/40 focus:border-slate-400 transition-all" />
+                <input id="reg-password" type="password" required minLength={6} value={password} onChange={(e) => setPassword(e.target.value)} placeholder="6자 이상" className="w-full px-4 py-2.5 rounded-lg border border-slate-300 bg-white text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-slate-500/40 focus:border-slate-400 transition-all" />
               </div>
               {error && <div className="p-3 rounded-lg bg-rose-50 border border-rose-200 text-sm text-rose-600">{error}</div>}
               <button type="submit" disabled={loading} className="w-full py-2.5 rounded-lg bg-slate-800 text-white font-bold text-sm hover:bg-slate-900 disabled:opacity-50 disabled:cursor-not-allowed transition-all shadow-sm">

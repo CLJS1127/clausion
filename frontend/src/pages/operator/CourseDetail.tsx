@@ -4,7 +4,10 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { operatorApi } from '../../api/operator';
 import { coursesApi } from '../../api/courses';
 import GlassCard from '../../components/common/GlassCard';
+import ConfirmModal from '../../components/common/ConfirmModal';
+import { toast } from '../../store/toastStore';
 import type { CurriculumSkill } from '../../types';
+import { formatDate } from '../../utils/dateFormat';
 
 function DifficultyDots({ level }: { level: number }) {
   return (
@@ -27,6 +30,7 @@ export default function CourseDetail() {
   const queryClient = useQueryClient();
   const [rejectNote, setRejectNote] = useState('');
   const [showRejectInput, setShowRejectInput] = useState(false);
+  const [showRevokeConfirm, setShowRevokeConfirm] = useState(false);
 
   const { data: course, isLoading: courseLoading } = useQuery({
     queryKey: ['operator', 'courses', courseId],
@@ -45,6 +49,7 @@ export default function CourseDetail() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['operator', 'courses', courseId] });
       queryClient.invalidateQueries({ queryKey: ['operator', 'courses'] });
+      toast.success('과정이 승인되었습니다', '학생에게 공개되어 수강 신청을 받을 수 있습니다.');
     },
   });
 
@@ -55,6 +60,7 @@ export default function CourseDetail() {
       queryClient.invalidateQueries({ queryKey: ['operator', 'courses'] });
       setShowRejectInput(false);
       setRejectNote('');
+      toast.success('과정이 반려되었습니다', '반려 사유가 강사에게 알림으로 전달됩니다.');
     },
   });
 
@@ -63,6 +69,7 @@ export default function CourseDetail() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['operator', 'courses', courseId] });
       queryClient.invalidateQueries({ queryKey: ['operator', 'courses'] });
+      toast.success('승인이 해제되었습니다', '해당 과정은 학생에게 더 이상 노출되지 않습니다.');
     },
   });
 
@@ -147,7 +154,7 @@ export default function CourseDetail() {
           </div>
           <div>
             <p className="text-xs text-slate-400 font-medium">생성일</p>
-            <p className="text-sm text-slate-700 mt-0.5">{course.createdAt?.slice(0, 10)}</p>
+            <p className="text-sm text-slate-700 mt-0.5">{formatDate(course.createdAt)}</p>
           </div>
           <div>
             <p className="text-xs text-slate-400 font-medium">개설 강사</p>
@@ -182,11 +189,7 @@ export default function CourseDetail() {
           )}
           {approvalStatus === 'APPROVED' && (
             <button
-              onClick={() => {
-                if (window.confirm('이 과정의 승인을 해제하시겠습니까?')) {
-                  revokeMutation.mutate();
-                }
-              }}
+              onClick={() => setShowRevokeConfirm(true)}
               disabled={revokeMutation.isPending}
               className="px-4 py-2 rounded-lg bg-amber-500 text-white text-sm font-medium hover:bg-amber-600 disabled:opacity-50 transition-colors"
             >
@@ -227,6 +230,16 @@ export default function CourseDetail() {
           )}
         </div>
       </GlassCard>
+
+      <ConfirmModal
+        isOpen={showRevokeConfirm}
+        title="과정 승인 해제"
+        message={`'${course.title}' 과정의 승인을 해제하시겠습니까?\n해제하면 학생에게 더 이상 노출되지 않습니다.`}
+        confirmLabel="승인 해제"
+        danger
+        onConfirm={() => revokeMutation.mutate()}
+        onClose={() => setShowRevokeConfirm(false)}
+      />
 
       {/* Curriculum Skills */}
       <div>

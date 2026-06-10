@@ -41,7 +41,13 @@ export default function Register() {
       navigate(`/${role.toLowerCase()}`, { replace: true });
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
-      setError('회원가입 실패: ' + msg);
+      if (msg.includes('이미 존재하는 이메일')) {
+        setError('이미 가입된 이메일입니다. 로그인하거나 다른 이메일을 사용해주세요.');
+      } else if (msg.includes('403') || msg.toLowerCase().includes('forbidden')) {
+        setError('초대 코드가 유효하지 않습니다. 코드가 만료되었거나 이미 사용되었을 수 있습니다.');
+      } else {
+        setError('회원가입 실패: ' + msg);
+      }
       console.error('Register error:', err);
     } finally {
       setLoading(false);
@@ -123,7 +129,10 @@ export default function Register() {
                   maxLength={8}
                   className="w-full px-4 py-2.5 rounded-lg border border-slate-300 bg-white text-sm text-slate-900 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/40 focus:border-indigo-400 transition-all font-mono tracking-widest text-center"
                 />
-                <p className="text-[11px] text-slate-400 mt-1">운영자에게 발급받은 초대 코드를 입력하세요.</p>
+                <p className="text-[11px] text-slate-400 mt-1">
+                  강사 가입에는 초대 코드(영문+숫자 8자리)가 필요합니다.
+                  소속 교육기관의 운영자에게 발급을 요청하세요. 코드는 발급 후 7일간 유효합니다.
+                </p>
               </div>
             )}
 

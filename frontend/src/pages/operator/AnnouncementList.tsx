@@ -2,11 +2,15 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { operatorApi } from '../../api/operator';
 import GlassCard from '../../components/common/GlassCard';
+import ConfirmModal from '../../components/common/ConfirmModal';
+import { toast } from '../../store/toastStore';
+import { formatDate, formatDateTime } from '../../utils/dateFormat';
 
 export default function AnnouncementList() {
   const queryClient = useQueryClient();
   const [showForm, setShowForm] = useState(false);
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [deleteTargetId, setDeleteTargetId] = useState<string | null>(null);
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
   const [targetType, setTargetType] = useState('ALL');
@@ -31,7 +35,10 @@ export default function AnnouncementList() {
 
   const deleteMutation = useMutation({
     mutationFn: operatorApi.deleteAnnouncement,
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['operator', 'announcements'] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['operator', 'announcements'] });
+      toast.success('공지사항이 삭제되었습니다');
+    },
   });
 
   return (
@@ -111,7 +118,7 @@ export default function AnnouncementList() {
                     </span>
                   </div>
                   <div className="flex items-center gap-3 shrink-0 ml-3">
-                    <span className="text-xs text-slate-400">{a.createdAt?.slice(0, 10)}</span>
+                    <span className="text-xs text-slate-400">{formatDate(a.createdAt)}</span>
                     <svg
                       className={`w-4 h-4 text-slate-400 transition-transform ${expandedId === a.id ? 'rotate-180' : ''}`}
                       fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}
@@ -127,13 +134,11 @@ export default function AnnouncementList() {
                 <div className="px-5 pb-5 border-t border-slate-100">
                   <p className="text-sm text-slate-700 mt-3 whitespace-pre-wrap">{a.content}</p>
                   <div className="flex items-center justify-between mt-4 pt-3 border-t border-slate-50">
-                    <p className="text-xs text-slate-400">{a.createdAt?.slice(0, 16).replace('T', ' ')}</p>
+                    <p className="text-xs text-slate-400">{formatDateTime(a.createdAt)}</p>
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
-                        if (window.confirm('이 공지사항을 삭제하시겠습니까?')) {
-                          deleteMutation.mutate(a.id);
-                        }
+                        setDeleteTargetId(a.id);
                       }}
                       className="px-3 py-1.5 rounded-lg text-xs font-medium text-rose-500 hover:bg-rose-50 transition-colors"
                     >
@@ -149,6 +154,16 @@ export default function AnnouncementList() {
           )}
         </div>
       )}
+
+      <ConfirmModal
+        isOpen={!!deleteTargetId}
+        title="공지사항 삭제"
+        message="이 공지사항을 삭제하시겠습니까? 삭제한 공지는 복구할 수 없습니다."
+        confirmLabel="삭제"
+        danger
+        onConfirm={() => deleteTargetId && deleteMutation.mutate(deleteTargetId)}
+        onClose={() => setDeleteTargetId(null)}
+      />
     </div>
   );
 }

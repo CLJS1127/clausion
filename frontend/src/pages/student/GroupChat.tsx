@@ -5,6 +5,7 @@ import { Client } from '@stomp/stompjs';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ApiError } from '../../api/client';
 import { groupChatApi } from '../../api/groupChat';
+import { toast } from '../../store/toastStore';
 import { studyGroupApi } from '../../api/studyGroup';
 import { toApiUrl } from '../../lib/apiBase';
 import { useAuthStore } from '../../store/authStore';
@@ -40,7 +41,7 @@ export default function GroupChat() {
       void clientRef.current.deactivate();
       clientRef.current = null;
     }
-    window.alert(message);
+    toast.info('채팅방을 나갑니다', message);
     startTransition(() => {
       navigate('/student/study-groups', { replace: true });
     });
@@ -157,7 +158,7 @@ export default function GroupChat() {
     if (!file || !clientRef.current?.connected) return;
 
     if (file.size > 10 * 1024 * 1024) {
-      alert('파일 크기는 10MB 이하만 가능합니다.');
+      toast.error('파일 크기는 10MB 이하만 가능합니다.');
       return;
     }
 
@@ -186,7 +187,7 @@ export default function GroupChat() {
         }),
       });
     } catch {
-      alert('파일 업로드에 실패했습니다.');
+      toast.error('파일 업로드에 실패했습니다.');
     } finally {
       setUploading(false);
       if (fileInputRef.current) fileInputRef.current.value = '';
@@ -231,7 +232,7 @@ export default function GroupChat() {
       const data = await res.json();
       window.open(data.url, '_blank');
     } catch {
-      alert('파일 다운로드에 실패했습니다.');
+      toast.error('파일 다운로드에 실패했습니다.');
     }
   };
 

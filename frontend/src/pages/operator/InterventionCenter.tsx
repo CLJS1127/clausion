@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { operatorApi } from '../../api/operator';
 import GlassCard from '../../components/common/GlassCard';
+import { formatDateTime } from '../../utils/dateFormat';
 
 export default function InterventionCenter() {
   const queryClient = useQueryClient();
@@ -130,7 +131,7 @@ export default function InterventionCenter() {
               <div key={d.id} className="flex items-center justify-between py-2 border-b border-slate-100 last:border-0">
                 <div>
                   <p className="text-sm text-slate-700">{d.description}</p>
-                  <p className="text-xs text-slate-400">{d.createdAt?.slice(0, 16).replace('T', ' ')}</p>
+                  <p className="text-xs text-slate-400">{formatDateTime(d.createdAt)}</p>
                 </div>
                 <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${
                   d.status === 'COMPLETED' ? 'bg-emerald-100 text-emerald-700'

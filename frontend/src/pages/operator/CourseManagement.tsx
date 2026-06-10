@@ -3,7 +3,10 @@ import { useNavigate } from 'react-router-dom';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { operatorApi } from '../../api/operator';
 import GlassCard from '../../components/common/GlassCard';
+import ConfirmModal from '../../components/common/ConfirmModal';
+import { toast } from '../../store/toastStore';
 import type { Course } from '../../types';
+import { formatDate } from '../../utils/dateFormat';
 
 export default function CourseManagement() {
   const navigate = useNavigate();
@@ -11,6 +14,7 @@ export default function CourseManagement() {
   const [filter, setFilter] = useState<'ALL' | 'PENDING' | 'APPROVED' | 'REJECTED'>('ALL');
   const [rejectNote, setRejectNote] = useState('');
   const [rejectingId, setRejectingId] = useState<string | null>(null);
+  const [revokeTarget, setRevokeTarget] = useState<Course | null>(null);
 
   const { data: courses, isLoading } = useQuery({
     queryKey: ['operator', 'courses'],
@@ -19,7 +23,10 @@ export default function CourseManagement() {
 
   const approveMutation = useMutation({
     mutationFn: (id: string) => operatorApi.approveCourse(id),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['operator', 'courses'] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['operator', 'courses'] });
+      toast.success('과정이 승인되었습니다', '학생에게 공개되어 수강 신청을 받을 수 있습니다.');
+    },
   });
 
   const rejectMutation = useMutation({
@@ -28,12 +35,16 @@ export default function CourseManagement() {
       queryClient.invalidateQueries({ queryKey: ['operator', 'courses'] });
       setRejectingId(null);
       setRejectNote('');
+      toast.success('과정이 반려되었습니다', '반려 사유가 강사에게 알림으로 전달됩니다.');
     },
   });
 
   const revokeMutation = useMutation({
     mutationFn: (id: string) => operatorApi.rejectCourse(id, '승인 해제'),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['operator', 'courses'] }),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['operator', 'courses'] });
+      toast.success('승인이 해제되었습니다', '해당 과정은 학생에게 더 이상 노출되지 않습니다.');
+    },
   });
 
   const filtered = courses?.filter((c: Course) =>
@@ -89,7 +100,7 @@ export default function CourseManagement() {
                   </div>
                   <p className="text-xs text-slate-500 mt-1">{course.description}</p>
                   <p className="text-xs text-slate-400 mt-1">
-                    정원: {course.maxCapacity ?? 30}명 | 생성일: {course.createdAt?.slice(0, 10)}
+                    정원: {course.maxCapacity ?? 30}명 | 생성일: {formatDate(course.createdAt)}
                   </p>
                 </div>
                 <div className="flex gap-2 flex-wrap justify-end">
@@ -117,11 +128,7 @@ export default function CourseManagement() {
                   )}
                   {course.approvalStatus === 'APPROVED' && (
                     <button
-                      onClick={() => {
-                        if (window.confirm('이 과정의 승인을 해제하시겠습니까?')) {
-                          revokeMutation.mutate(course.id);
-                        }
-                      }}
+                      onClick={() => setRevokeTarget(course)}
                       disabled={revokeMutation.isPending}
                       className="px-4 py-2 rounded-lg bg-amber-500 text-white text-sm font-medium hover:bg-amber-600 disabled:opacity-50 transition-colors"
                     >
@@ -170,6 +177,16 @@ export default function CourseManagement() {
           )}
         </div>
       )}
+
+      <ConfirmModal
+        isOpen={!!revokeTarget}
+        title="과정 승인 해제"
+        message={`'${revokeTarget?.title}' 과정의 승인을 해제하시겠습니까?\n해제하면 학생에게 더 이상 노출되지 않습니다.`}
+        confirmLabel="승인 해제"
+        danger
+        onConfirm={() => revokeTarget && revokeMutation.mutate(revokeTarget.id)}
+        onClose={() => setRevokeTarget(null)}
+      />
     </div>
   );
 }
