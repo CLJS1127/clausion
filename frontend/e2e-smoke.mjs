@@ -1,5 +1,12 @@
-// UX 개선 E2E 클릭 검증 스크립트 (일회용)
-// 실행: node _e2e_check.mjs
+// E2E 스모크 테스트 — 실제 브라우저로 핵심 UX 플로우를 클릭 검증한다.
+//
+// 사전 조건:
+//   1. 백엔드 실행 (.\run-backend.ps1)
+//   2. E2E용 HTTP 프론트 서버: npx vite --config vite.e2e.config.ts  (포트 5174)
+//   3. npm i --no-save playwright-core  (일회 설치, package.json 변경 없음)
+//   4. 시더 계정 + rkdtk123/admin123 계정 존재
+//
+// 실행: node e2e-smoke.mjs
 import { chromium } from 'playwright-core';
 
 const BASE = 'http://localhost:5174';
