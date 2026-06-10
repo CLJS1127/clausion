@@ -1,5 +1,5 @@
 -- V19: Ensure max_capacity >= actual enrolled student count per course
-UPDATE course c
+UPDATE courses c
 SET max_capacity = sub.student_count
 FROM (
     SELECT st.course_id, COUNT(*) AS student_count
