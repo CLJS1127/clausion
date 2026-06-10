@@ -75,7 +75,7 @@ public class CourseController {
                 .maxCapacity(request.maxCapacity() != null ? request.maxCapacity() : 30)
                 .createdBy(instructor)
                 .status("ACTIVE")
-                .approvalStatus("APPROVED")
+                .approvalStatus("PENDING")
                 .build();
         course = courseRepository.save(course);
 
